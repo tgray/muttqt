@@ -1,0 +1,390 @@
+#!/usr/bin/env python
+"""muttqt - Mutt query tool.
+
+Stores sent addresses to a database and queries the database and other sources
+for email addresses."""
+import os, sys
+import fileinput
+import argparse
+import sqlite3
+import email
+import email.utils
+import datetime as dt
+from time import strftime
+import subprocess as sp
+import shlex
+from ConfigParser import ConfigParser
+
+
+# constants
+configfile = '~/.muttqt/muttqt.conf'
+configfile = os.path.expanduser(configfile)
+sqldateformat = '%Y-%m-%d %H:%M:%S'
+lbdbdateformat = '%Y-%m-%d %H:%M'
+
+def configDefaults():
+    """Sets up config file defaults.
+
+    These are used if a particular parameter can't be found in the config file,
+    or if the config file doesn't exist."""
+    parser = ConfigParser()
+    parser.add_section('global')
+    parser.add_section('sent')
+    parser.add_section('alias')
+    parser.add_section('osx_abook')
+    parser.set('global', 'helpers', 'mutt_alias, sent')
+    parser.set('osx_abook', 'cmd', 'contacts -m')
+    parser.set('alias', 'files', '~/.mutt/aliases')
+    parser.set('sent', 'sqlfile', '~/.muttqt/sent.sqlite3')
+    parser.set('sent', 'date-format', '%Y-%m-%d')
+    return parser
+
+def configWrite(parser):
+    """Writes out a default config file."""
+    # write out a default config file if one doesn't exist already
+    print "attempting to make default config file at %s" % configfile
+    if not os.path.exists(os.path.dirname(configfile)):
+        try:
+            print "making directory"
+            os.makedirs(os.path.dirname(configfile))
+        except:
+            print "failed making directory"
+            sys.exit(10)
+    if not os.path.exists(configfile):
+        try:
+            print "writing file"
+            o = open(configfile, 'w')
+            parser.write(o)
+            o.close()
+        except:
+            print "failed writing file"
+            sys.exit(10)
+    else:
+        print "config file already exists"
+
+def configRead():
+    """Reads the config file.
+
+    Also fetches the configuration defaults."""
+    parser = configDefaults()
+    try:
+        parser.read(os.path.expanduser(configfile))
+    except:
+        print "problem reading config file"
+        sys.exit(10)
+    return parser
+
+def ingestEmail(lines):
+    """Scrape email addresses from sent mails.
+
+    Looks in the To:, CC:, and BCC: headers."""
+    msg = email.message_from_string(lines)
+
+    now = dt.datetime.now()
+    t = now.strftime(sqldateformat)
+
+    toAddr = []
+    for header in ['to', 'cc', 'bcc']:
+        if msg.has_key(header):
+            toAddr.extend(msg.get_all(header, []))
+
+    toAddr = email.utils.getaddresses(toAddr)
+    data = []
+    for i,a in enumerate(toAddr):
+        if a[0] == '':
+            tmpName = a[1].split('@')[0]
+            b = (a[1].lower(), tmpName, t)
+        else:
+            b = (a[1].lower(), a[0], t)
+        data.append(b)
+
+    return data
+
+def ingestLBDB(lines):
+    """Imports sent mail history from LBDB."""
+    data = []
+    for line in lines:
+        a, n, t = line.rstrip().split('\t')
+        t = dt.datetime.strptime(t, lbdbdateformat)
+        data.append((a.lower(), n, t.strftime(sqldateformat)))
+    return data
+
+def getSQL(cfg, make = False):
+    """Connect to the sent mail SQL db file."""
+    sqlfn = os.path.expanduser(cfg.get('sent', 'sqlfile'))
+    if not make and not os.path.exists(sqlfn):
+        return
+    sql = sqlite3.connect(sqlfn)
+    c = sql.cursor()
+    return sql, c
+
+def createTables(cfg):
+    """Creates the default table in the SQL db."""
+    try:
+        sql, c = getSQL(cfg, make = True)
+    except:
+        return []
+    tables = c.execute('select name from sqlite_master')
+    tlist = []
+    for table in tables:
+        tlist.append(table[0])
+    if 'addresses' not in tlist:
+        c.execute('create table addresses (email text, name text, date text)')
+        # think about not having the unique index be keyed to name as well
+        c.execute('create unique index "post_email" on addresses (email, name)')
+    return sql, c
+
+def writeSentSQL(cfg, data):
+    """Write sent addresses to the SQL db."""
+    try:
+        sql, c = getSQL(cfg)
+    except:
+        sql, c = createTables(cfg)
+    for d in data:
+        c.execute('insert or replace into addresses values (?, ?, ?)', d)
+    sql.commit()
+    c.close()
+
+def datePruneSentSQL(cfg, query):
+    """Remove addresses from sent SQL db prior to date.
+    
+    Date should be in YYYY-MM-DD format."""
+    try:
+        sql, c = getSQL(cfg)
+    except:
+        return []
+    q = "%s" % query.decode('utf-8')
+    c.execute('delete from addresses where datetime(date) < ?', (q,))
+    sql.commit()
+    c.close()
+
+def removeSentSQL(cfg, rowids):
+    """Delete addresses from the SQL db.
+    
+    Addresses to be deleted are specified by rowid."""
+    try:
+        sql, c = getSQL(cfg)
+    except:
+        return []
+    for q in rowids:
+        c.execute('delete from addresses where rowid = ?', (q,))
+    sql.commit()
+    c.close()
+
+def searchSentSQL(cfg, query):
+    """Query the sent address SQL db.
+    
+    Matches against name or email."""
+    try:
+        sql, c = getSQL(cfg)
+    except:
+        return []
+    displaydateformat = cfg.get('sent', 'date-format', raw=True)
+    q = "%%%s%%" % query.decode('utf-8')
+    c.execute('select email, name, date from addresses where name like ? or '
+        'email like ? order by date desc', (q,q))
+    sqlchildren = c.fetchall()
+    c.close()
+    results = []
+    for s in sqlchildren:
+        tmp = dt.datetime.strptime(s[-1], sqldateformat)
+        tmp = tmp.strftime(displaydateformat)
+        # tmp += ' [sent]'
+        result = (s[0], s[1], tmp)
+        results.append(result)
+    return results
+
+def printSentSQL(cfg):
+    """Prints the sent SQL db.
+
+    Entries are prefixed by the rowid of the entry and are sorted
+    alphabetically by email address."""
+    try:
+        sql, c = getSQL(cfg)
+    except:
+        print 'no sent sql db'
+        sys.exit(11)
+    c.execute('select rowid, email, name, date from addresses order by email')
+    sqlchildren = c.fetchall()
+    c.close()
+    results = [s for s in sqlchildren]
+    return results
+
+def readAliasFiles(cfg):
+    """Read data from mutt alias files."""
+    files = cfg.get('alias', 'files').split(',')
+    files = [os.path.expanduser(f.strip()) for f in files]
+
+    data = []
+    for fn in files:
+        f = open(fn)
+        lines = f.readlines()
+        f.close()
+        # alias tgray1 Tim Gray <tgray1@swarthmore.edu>
+        for line in lines:
+            l = line.rstrip().split()
+            if l != [] and l[0] == 'alias':
+                stuff = l[1:]
+                nick = "%s [%s]" % (stuff[0], os.path.basename(fn))
+                addy = " ".join(stuff[1:])
+                # some addresses seem to have escaped " - get rid of them
+                addy = addy.translate(None, '\\')
+                if addy.find(',') == -1:
+                    a = email.utils.parseaddr(addy)
+                    data.append((a[1], a[0], nick))
+    return data
+
+def searchAliasDat(data, query):
+    """Search alias data for query."""
+    results = []
+    query = query.lower()
+    for l in data:
+        if l[0].lower().find(query) > -1 or l[1].lower().find(query) > -1:
+            results.append(l)
+    return results
+
+def searchOSXAB(cfg, query):
+    """Search OS X address book for query.
+
+    Depends on an external program that returns data in the proper format."""
+    cmd = cfg.get('osx_abook', 'cmd')
+    cmd = os.path.expanduser(cmd)
+    cmd = '%s %s' % (cmd, query)
+    c = shlex.split(cmd)
+    try:
+        proc = sp.Popen(c , stdout = sp.PIPE, stderr = sp.PIPE)
+    except:
+        results = []
+        return results
+    stdout, stderr = proc.communicate()
+    if stdout:
+        results = stdout.rstrip().split('\n')
+        results = [r + '\tAddress Book' for r in results]
+        results = [tuple(r.split('\t')) for r in results]
+    else:
+        results = []
+    return results
+
+def printResults(results, numbered = False):
+    """Print search results."""
+    i = len(results)
+    print "%i matches:" % i
+    if numbered:
+        fstr = "%s\t%s\t%s\t%s" 
+    else:
+        fstr = "%s\t%s\t%s" 
+    for i,s in enumerate(results):
+        out = fstr % s
+        print out.encode('utf-8')
+        # print out
+
+def main(argv=None):
+    """Main function."""
+    if argv is None:
+        argv = sys.argv
+    programName = os.path.basename(argv[0])
+
+    parser = argparse.ArgumentParser(
+        description = 'Scrape email addresses from emails.')
+
+    parser.add_argument('-i', '--import',
+        dest = 'import_file', 
+        default = False,
+        help = 'import addresses from an LBDB m_inmail file')
+
+    parser.add_argument('-f', '--fetch',
+        dest = 'fetch', 
+        metavar = 'FETCH_FILE',
+        type = file,
+        const = sys.stdin,
+        nargs = '?',
+        help = ('fetch addressees from a file.  If no file is given, stdin is '
+            'used.'))
+
+    parser.add_argument('-q', '--query',
+        dest = 'query', 
+        default = False,
+        nargs = 1,
+        help = 'query the database')
+
+    parser.add_argument('--print-sent',
+        dest = 'print_sent', 
+        action = 'store_true',
+        help = 'print sent history with sql rowids')
+
+    parser.add_argument('--remove-sent',
+        dest = 'remove_sent', 
+        action = 'store',
+        nargs = '*',
+        default = False,
+        help = 'remove entries by rowid from the sent history')
+
+    parser.add_argument('--date-prune',
+        dest = 'date_prune', 
+        default = False,
+        help = 'print sent history')
+
+    parser.add_argument('--write-config',
+        dest = 'write_config', 
+        action = 'store_true',
+        default = False,
+        help = 'write out a default config file to ~/.muttqt/muttqt.conf')
+
+    args = parser.parse_args()
+
+    # get configuration data
+    cfg = configRead()
+
+    if args.print_sent:
+        results = printSentSQL(cfg)
+        printResults(results, numbered = True)
+        return 0
+
+    if args.write_config:
+        configWrite(cfg)
+        return 0
+
+    if args.date_prune:
+        results = datePruneSentSQL(cfg, args.date_prune)
+        return 0
+
+    if args.remove_sent:
+        results = removeSentSQL(cfg, args.remove_sent)
+        return 0
+
+    if args.import_file:
+        import codecs
+        fin = codecs.open(args.import_file, 'r', 'latin-1')
+        lines = fin.readlines()
+        data = ingestLBDB(lines)
+    
+    if args.fetch:
+        # read our lines from stdin or the file passed
+        lines = ''.join(args.fetch.readlines())
+        data = ingestEmail(lines)
+
+    if args.fetch or args.import_file:
+        writeSentSQL(cfg, data)
+        # for a in data:
+        #     print "%s\t%s\t%s" % a
+    if args.query:
+        helpers = cfg.get('global', 'helpers').split(',')
+        helpers = [h.strip() for h in helpers]
+        # helpers = ['mutt_alias', 'osx_abook', 'sent']
+
+        results = []
+        query = args.query[0]
+        for helper in helpers:
+            if helper == 'mutt_alias':
+                aliasDat = readAliasFiles(cfg)
+                data = searchAliasDat(aliasDat, query)
+            elif helper == 'osx_abook':
+                data = searchOSXAB(cfg, query)
+            elif helper == 'sent':
+                data = searchSentSQL(cfg, query)
+            results.extend(data)
+
+        printResults(results)
+
+if __name__ == "__main__":
+    sys.exit(main())
