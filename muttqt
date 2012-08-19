@@ -243,11 +243,19 @@ def searchAliasDat(data, query):
             results.append(l)
     return results
 
-def searchOSXAB(cfg, query):
-    """Search OS X address book for query.
+def searchExtCommand(cfg, helper, query):
+    """Search with an external command.
 
-    Depends on an external program that returns data in the proper format."""
-    cmd = cfg.get('osx_abook', 'cmd')
+    Depends on an the external program that returns data in the proper
+    format.  The command is set up in the config file.  The proper format for
+    returned data is the same as the mutt query command expects except with out
+    the header line."""
+    cmd = cfg.get(helper, 'cmd')
+    try:
+        helperText = cfg.get(helper, 'text')
+    except:
+        helperText = helper
+
     cmd = os.path.expanduser(cmd)
     cmd = '%s %s' % (cmd, query)
     c = shlex.split(cmd)
@@ -258,8 +266,9 @@ def searchOSXAB(cfg, query):
         return results
     stdout, stderr = proc.communicate()
     if stdout:
+        helperText = '\t%s' % helperText
         results = stdout.rstrip().split('\n')
-        results = [r + '\tAddress Book' for r in results]
+        results = [r + helperText for r in results]
         results = [tuple(r.split('\t')) for r in results]
     else:
         results = []
@@ -378,8 +387,8 @@ def main(argv=None):
             if helper == 'mutt_alias':
                 aliasDat = readAliasFiles(cfg)
                 data = searchAliasDat(aliasDat, query)
-            elif helper == 'osx_abook':
-                data = searchOSXAB(cfg, query)
+            elif helper in ['osx_abook',]:
+                data = searchExtCommand(cfg, helper, query)
             elif helper == 'sent':
                 data = searchSentSQL(cfg, query)
             results.extend(data)
