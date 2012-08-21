@@ -35,7 +35,11 @@ def configDefaults():
     parser.set('global', 'helpers', 'mutt_alias, sent')
     parser.set('osx_abook', 'cmd', 'contacts -m')
     parser.set('alias', 'files', '~/.mutt/aliases')
+    parser.set('sent', 'format', 'sql')
+    parser.set('sent', 'sortby', 'date')
     parser.set('sent', 'sqlfile', '~/.muttqt/sent.sqlite3')
+    parser.set('sent', 'dbfile', '~/.muttqt/sent.db')
+    parser.set('sent', 'txtfile', '~/.muttqt/sent.txt')
     parser.set('sent', 'date-format', '%Y-%m-%d')
     return parser
 
@@ -100,14 +104,43 @@ def ingestEmail(lines):
 
     return data
 
-def ingestLBDB(lines):
+def ingestLBDB(fn):
     """Imports sent mail history from LBDB."""
+    try:
+        import codecs
+        fin = codecs.open(fn, 'r', 'latin-1')
+        lines = fin.readlines()
+        fin.close()
+    except:
+        print "problem opening file %s" % fn
+        sys.exit(13)
     data = []
     for line in lines:
         a, n, t = line.rstrip().split('\t')
         t = dt.datetime.strptime(t, lbdbdateformat)
         data.append((a.lower(), n, t.strftime(sqldateformat)))
     return data
+
+def dumpFile(data, fn):
+    """Dump the slq file to an LBDB compatible text file."""
+    fn = os.path.expanduser(fn)
+    lines = []
+    for d in data:
+        t = dt.datetime.strptime(d[3], sqldateformat)
+        tmp = (d[1], d[2], t.strftime(lbdbdateformat))
+        line = '\t'.join(tmp) + '\n'
+        lines.append(line)
+    if os.path.exists(fn):
+        print "output file %s already exists" % fn
+        sys.exit(13)
+    try:
+        import codecs
+        f = codecs.open(fn, 'w', 'latin-1')
+        f.writelines(lines)
+        f.close()
+    except:
+        print "problem writing file %s" % fn
+        sys.exit(13)
 
 def getSQL(cfg, make = False):
     """Connect to the sent mail SQL db file."""
@@ -171,7 +204,7 @@ def removeSentSQL(cfg, rowids):
     sql.commit()
     c.close()
 
-def searchSentSQL(cfg, query):
+def searchSentSQL(cfg, query, sortmethod = None):
     """Query the sent address SQL db.
     
     Matches against name or email."""
@@ -180,9 +213,22 @@ def searchSentSQL(cfg, query):
     except:
         return []
     displaydateformat = cfg.get('sent', 'date-format', raw=True)
+    sortby = cfg.get('sent', 'sortby')
+    if sortmethod:
+        sortby = sortmethod
+    if sortby not in ['email', 'name', 'date']:
+        sortby = 'date'
+    sortTerms = {
+        'email': 'email',
+        'name': 'name',
+        'date': 'date desc' }
+    s = sortTerms[sortby]
+    # I don't know why I can't use parameter substitution for the order by
+    # part.  I've made sure to ONLY accept email, name, or date as options
+    # which should be secure.  Hopefully.
     q = "%%%s%%" % query.decode('utf-8')
     c.execute('select email, name, date from addresses where name like ? or '
-        'email like ? order by date desc', (q,q))
+        'email like ? order by ' + s, (q,q))
     sqlchildren = c.fetchall()
     c.close()
     results = []
@@ -194,8 +240,8 @@ def searchSentSQL(cfg, query):
         results.append(result)
     return results
 
-def printSentSQL(cfg):
-    """Prints the sent SQL db.
+def getAllSentSQL(cfg):
+    """Gets all data in the sent SQL db.
 
     Entries are prefixed by the rowid of the entry and are sorted
     alphabetically by email address."""
@@ -217,9 +263,12 @@ def readAliasFiles(cfg):
 
     data = []
     for fn in files:
-        f = open(fn)
-        lines = f.readlines()
-        f.close()
+        try:
+            f = open(fn)
+            lines = f.readlines()
+            f.close()
+        except:
+            return []
         # alias tgray1 Tim Gray <tgray1@swarthmore.edu>
         for line in lines:
             l = line.rstrip().split()
@@ -234,8 +283,8 @@ def readAliasFiles(cfg):
                     data.append((a[1], a[0], nick))
     return data
 
-def searchAliasDat(data, query):
-    """Search alias data for query."""
+def searchDat(data, query):
+    """Search list data for query."""
     results = []
     query = query.lower()
     for l in data:
@@ -296,11 +345,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description = 'Scrape email addresses from emails.')
 
-    parser.add_argument('-i', '--import',
-        dest = 'import_file', 
-        default = False,
-        help = 'import addresses from an LBDB m_inmail file')
-
     parser.add_argument('-f', '--fetch',
         dest = 'fetch', 
         metavar = 'FETCH_FILE',
@@ -310,11 +354,28 @@ def main(argv=None):
         help = ('fetch addressees from a file.  If no file is given, stdin is '
             'used.'))
 
-    parser.add_argument('-q', '--query',
+    parser.add_argument( '-q', '--query',
         dest = 'query', 
-        default = False,
         nargs = 1,
+        default = False,
         help = 'query the database')
+
+    parser.add_argument( '-s', '--sort',
+        dest = 'sortby', 
+        nargs = 1,
+        default = [None,],
+        help = ("set the sort order of sent address results.  valid choices "
+            "are 'email', 'date', or 'name'"))
+
+    parser.add_argument('-i', '--import',
+        dest = 'import_file', 
+        default = False,
+        help = 'import addresses from an LBDB m_inmail file')
+
+    parser.add_argument('-d', '--dump',
+        dest = 'dump_file', 
+        default = False,
+        help = 'dump sent addresses to an LBDB compatible file')
 
     parser.add_argument('--print-sent',
         dest = 'print_sent', 
@@ -323,6 +384,7 @@ def main(argv=None):
 
     parser.add_argument('--remove-sent',
         dest = 'remove_sent', 
+        metavar = 'ROWID',
         action = 'store',
         nargs = '*',
         default = False,
@@ -330,8 +392,9 @@ def main(argv=None):
 
     parser.add_argument('--date-prune',
         dest = 'date_prune', 
+        metavar = 'DATE',
         default = False,
-        help = 'print sent history')
+        help = 'prune all entries prior to DATE')
 
     parser.add_argument('--write-config',
         dest = 'write_config', 
@@ -345,7 +408,7 @@ def main(argv=None):
     cfg = configRead()
 
     if args.print_sent:
-        results = printSentSQL(cfg)
+        results = getAllSentSQL(cfg)
         printResults(results, numbered = True)
         return 0
 
@@ -361,11 +424,15 @@ def main(argv=None):
         results = removeSentSQL(cfg, args.remove_sent)
         return 0
 
+    if args.dump_file:
+        results = getAllSentSQL(cfg)
+        dumpFile(results, args.dump_file)
+        return 0
+
+    # don't return a value for either import_file or fetch - these modify the
+    # data bbase and we will just write out the database after both of them.
     if args.import_file:
-        import codecs
-        fin = codecs.open(args.import_file, 'r', 'latin-1')
-        lines = fin.readlines()
-        data = ingestLBDB(lines)
+        data = ingestLBDB(args.import_file)
     
     if args.fetch:
         # read our lines from stdin or the file passed
@@ -374,8 +441,8 @@ def main(argv=None):
 
     if args.fetch or args.import_file:
         writeSentSQL(cfg, data)
-        # for a in data:
-        #     print "%s\t%s\t%s" % a
+        return 0
+
     if args.query:
         helpers = cfg.get('global', 'helpers').split(',')
         helpers = [h.strip() for h in helpers]
@@ -386,14 +453,16 @@ def main(argv=None):
         for helper in helpers:
             if helper == 'mutt_alias':
                 aliasDat = readAliasFiles(cfg)
-                data = searchAliasDat(aliasDat, query)
+                data = searchDat(aliasDat, query)
             elif helper in ['osx_abook',]:
                 data = searchExtCommand(cfg, helper, query)
             elif helper == 'sent':
-                data = searchSentSQL(cfg, query)
+                data = searchSentSQL(cfg, query, args.sortby[0])
+                # data = searchSentSQL2('~/.muttqt/sent.txt', query)
             results.extend(data)
 
         printResults(results)
+        return 0
 
 if __name__ == "__main__":
     sys.exit(main())
