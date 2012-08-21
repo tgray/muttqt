@@ -38,7 +38,6 @@ def configDefaults():
     parser.set('sent', 'format', 'sql')
     parser.set('sent', 'sortby', 'date')
     parser.set('sent', 'sqlfile', '~/.muttqt/sent.sqlite3')
-    parser.set('sent', 'dbfile', '~/.muttqt/sent.db')
     parser.set('sent', 'txtfile', '~/.muttqt/sent.txt')
     parser.set('sent', 'date-format', '%Y-%m-%d')
     return parser
@@ -91,6 +90,11 @@ def ingestEmail(lines):
     for header in ['to', 'cc', 'bcc']:
         if msg.has_key(header):
             toAddr.extend(msg.get_all(header, []))
+    out = []
+    for a in toAddr:
+        b = a.decode('utf-8')
+        out.append(b)
+    toAddr = out
 
     toAddr = email.utils.getaddresses(toAddr)
     data = []
@@ -104,9 +108,102 @@ def ingestEmail(lines):
 
     return data
 
+def getAllSentTxt(cfg):
+    """Gets all data in the sent txt file.
+
+    This file has the same format as an LBDB database."""
+    fn = cfg.get('sent', 'txtfile')
+    tempdat = ingestLBDB(fn)
+    data = []
+    for i,d in enumerate(tempdat):
+        t = [str(i),]
+        t.extend(d)
+        data.append(tuple(t))
+    return data
+
+def datePruneSentTxt(cfg, date):
+    """Remove addresses from sent txt file prior to date.
+
+    Date should be in YYYY-MM-DD format."""
+    data = getAllSentTxt(cfg)
+    sorttmp = [(a[3], a, i) for i,a in enumerate(data)]
+    sorttmp.sort()
+    sorttmp.reverse()
+    from dateutil.parser import parse
+    d = parse(date)
+    for i,a in enumerate(sorttmp):
+        t = dt.datetime.strptime(a[0], sqldateformat)
+        if d > t:
+            break
+    sorttmp = sorttmp[:i]
+    results = [a[1] for a in sorttmp]
+    writeSentTxt(cfg, results)
+
+def removeSentTxt(cfg, rowids):
+    """Delete addresses from the SQL txt file.
+
+    Addresses to be deleted are specified by rowid."""
+    rowids = [int(i) for i in rowids]
+    data = getAllSentTxt(cfg)
+    pruned = [j for i,j in enumerate(data) if i not in rowids]
+    writeSentTxt(cfg, pruned)
+
+def writeSentTxt(cfg, data):
+    """Write sent addresses to the txt file.
+
+    This function looks for the number of columns in the data.  If there are 3,
+    we assume that the data was scraped from an email using ingestEmail, so the
+    file is opened up in append mode and the data just added to the end.  If
+    there are 4 columns, assume the data is either a full listing or a pruned
+    listing, so open the file up in write mode and overwrite the existing
+    data.
+
+    Note (as of now) that unlike the SQL version of this function, no attempt
+    is made to prune duplicate email entries."""
+    # this is hackish
+    if len(data[0]) == 3:
+        k = 0
+        mode = 'a'
+    elif len(data[0]) == 4:
+        k = 1
+        mode = 'w'
+    fn = cfg.get('sent', 'txtfile')
+    fn = os.path.expanduser(fn)
+    lines = []
+    for d in data:
+        t = dt.datetime.strptime(d[k+2], sqldateformat)
+        tmp = (d[k+0], d[k+1], t.strftime(lbdbdateformat))
+        line = '\t'.join(tmp) + '\n'
+        lines.append(line)
+    try:
+        import codecs
+        f = codecs.open(fn, mode, 'latin-1')
+        f.writelines(lines)
+        f.close()
+    except:
+        print "problem writing file %s" % fn
+        sys.exit(13)
+
+def searchSentTxt(cfg, query, sortby):
+    """Query the sent address txt file.
+
+    Matches against name or email."""
+    fn = cfg.get('sent', 'txtfile')
+    data = ingestLBDB(fn)
+    results = searchDat(data, query)
+    o = {'email':0, 'name':1, 'date':2}
+    i = o[sortby]
+    sorttmp = [(a[i], a) for a in results]
+    sorttmp.sort()
+    if sortby == 'date':
+        sorttmp.reverse()
+    results = [a[1] for a in sorttmp]
+    return results
+
 def ingestLBDB(fn):
     """Imports sent mail history from LBDB."""
     try:
+        fn = os.path.expanduser(fn)
         import codecs
         fin = codecs.open(fn, 'r', 'latin-1')
         lines = fin.readlines()
@@ -180,7 +277,7 @@ def writeSentSQL(cfg, data):
 
 def datePruneSentSQL(cfg, query):
     """Remove addresses from sent SQL db prior to date.
-    
+
     Date should be in YYYY-MM-DD format."""
     try:
         sql, c = getSQL(cfg)
@@ -193,7 +290,7 @@ def datePruneSentSQL(cfg, query):
 
 def removeSentSQL(cfg, rowids):
     """Delete addresses from the SQL db.
-    
+
     Addresses to be deleted are specified by rowid."""
     try:
         sql, c = getSQL(cfg)
@@ -204,20 +301,15 @@ def removeSentSQL(cfg, rowids):
     sql.commit()
     c.close()
 
-def searchSentSQL(cfg, query, sortmethod = None):
+def searchSentSQL(cfg, query, sortby = None):
     """Query the sent address SQL db.
-    
+
     Matches against name or email."""
     try:
         sql, c = getSQL(cfg)
     except:
         return []
     displaydateformat = cfg.get('sent', 'date-format', raw=True)
-    sortby = cfg.get('sent', 'sortby')
-    if sortmethod:
-        sortby = sortmethod
-    if sortby not in ['email', 'name', 'date']:
-        sortby = 'date'
     sortTerms = {
         'email': 'email',
         'name': 'name',
@@ -316,6 +408,7 @@ def searchExtCommand(cfg, helper, query):
     stdout, stderr = proc.communicate()
     if stdout:
         helperText = '\t%s' % helperText
+        stdout = stdout.decode('utf-8')
         results = stdout.rstrip().split('\n')
         results = [r + helperText for r in results]
         results = [tuple(r.split('\t')) for r in results]
@@ -328,13 +421,16 @@ def printResults(results, numbered = False):
     i = len(results)
     print "%i matches:" % i
     if numbered:
-        fstr = "%s\t%s\t%s\t%s" 
+        fstr = "%s\t%s\t%s\t%s"
     else:
-        fstr = "%s\t%s\t%s" 
+        fstr = "%s\t%s\t%s"
     for i,s in enumerate(results):
         out = fstr % s
-        print out.encode('utf-8')
         # print out
+        # print unicode(out)
+        # uout = out.decode('utf-8')
+        print out.encode('utf-8')
+        # print uout.encode('ascii', 'ignore')
 
 def main(argv=None):
     """Main function."""
@@ -346,7 +442,7 @@ def main(argv=None):
         description = 'Scrape email addresses from emails.')
 
     parser.add_argument('-f', '--fetch',
-        dest = 'fetch', 
+        dest = 'fetch',
         metavar = 'FETCH_FILE',
         type = file,
         const = sys.stdin,
@@ -355,35 +451,35 @@ def main(argv=None):
             'used.'))
 
     parser.add_argument( '-q', '--query',
-        dest = 'query', 
+        dest = 'query',
         nargs = 1,
         default = False,
         help = 'query the database')
 
     parser.add_argument( '-s', '--sort',
-        dest = 'sortby', 
+        dest = 'sortby',
         nargs = 1,
-        default = [None,],
+        default = None,
         help = ("set the sort order of sent address results.  valid choices "
             "are 'email', 'date', or 'name'"))
 
     parser.add_argument('-i', '--import',
-        dest = 'import_file', 
+        dest = 'import_file',
         default = False,
         help = 'import addresses from an LBDB m_inmail file')
 
     parser.add_argument('-d', '--dump',
-        dest = 'dump_file', 
+        dest = 'dump_file',
         default = False,
         help = 'dump sent addresses to an LBDB compatible file')
 
     parser.add_argument('--print-sent',
-        dest = 'print_sent', 
+        dest = 'print_sent',
         action = 'store_true',
         help = 'print sent history with sql rowids')
 
     parser.add_argument('--remove-sent',
-        dest = 'remove_sent', 
+        dest = 'remove_sent',
         metavar = 'ROWID',
         action = 'store',
         nargs = '*',
@@ -391,13 +487,13 @@ def main(argv=None):
         help = 'remove entries by rowid from the sent history')
 
     parser.add_argument('--date-prune',
-        dest = 'date_prune', 
+        dest = 'date_prune',
         metavar = 'DATE',
         default = False,
         help = 'prune all entries prior to DATE')
 
     parser.add_argument('--write-config',
-        dest = 'write_config', 
+        dest = 'write_config',
         action = 'store_true',
         default = False,
         help = 'write out a default config file to ~/.muttqt/muttqt.conf')
@@ -407,8 +503,24 @@ def main(argv=None):
     # get configuration data
     cfg = configRead()
 
+
+    sentFileFormat = cfg.get('sent', 'format')
+
+    if sentFileFormat == 'sql':
+        getAllSent = getAllSentSQL
+        datePruneSent = datePruneSentSQL
+        removeSent = removeSentSQL
+        writeSent = writeSentSQL
+        searchSent = searchSentSQL
+    elif sentFileFormat == 'text':
+        getAllSent = getAllSentTxt
+        datePruneSent = datePruneSentTxt
+        removeSent = removeSentTxt
+        writeSent = writeSentTxt
+        searchSent = searchSentTxt
+
     if args.print_sent:
-        results = getAllSentSQL(cfg)
+        results = getAllSent(cfg)
         printResults(results, numbered = True)
         return 0
 
@@ -417,15 +529,15 @@ def main(argv=None):
         return 0
 
     if args.date_prune:
-        results = datePruneSentSQL(cfg, args.date_prune)
+        results = datePruneSent(cfg, args.date_prune)
         return 0
 
     if args.remove_sent:
-        results = removeSentSQL(cfg, args.remove_sent)
+        results = removeSent(cfg, args.remove_sent)
         return 0
 
     if args.dump_file:
-        results = getAllSentSQL(cfg)
+        results = getAllSent(cfg)
         dumpFile(results, args.dump_file)
         return 0
 
@@ -433,14 +545,14 @@ def main(argv=None):
     # data bbase and we will just write out the database after both of them.
     if args.import_file:
         data = ingestLBDB(args.import_file)
-    
+
     if args.fetch:
         # read our lines from stdin or the file passed
         lines = ''.join(args.fetch.readlines())
         data = ingestEmail(lines)
 
     if args.fetch or args.import_file:
-        writeSentSQL(cfg, data)
+        writeSent(cfg, data)
         return 0
 
     if args.query:
@@ -457,8 +569,10 @@ def main(argv=None):
             elif helper in ['osx_abook',]:
                 data = searchExtCommand(cfg, helper, query)
             elif helper == 'sent':
-                data = searchSentSQL(cfg, query, args.sortby[0])
-                # data = searchSentSQL2('~/.muttqt/sent.txt', query)
+                sortby = cfg.get('sent', 'sortby')
+                if args.sortby:
+                    sortby = args.sortby[0]
+                data = searchSent(cfg, query, sortby)
             results.extend(data)
 
         printResults(results)
