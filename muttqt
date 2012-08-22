@@ -148,7 +148,7 @@ def removeSentTxt(cfg, rowids):
     pruned = [j for i,j in enumerate(data) if i not in rowids]
     writeSentTxt(cfg, pruned)
 
-def writeSentTxt(cfg, data):
+def writeSentTxt(cfg, data, enc = 'utf-8'):
     """Write sent addresses to the txt file.
 
     This function looks for the number of columns in the data.  If there are 3,
@@ -177,7 +177,8 @@ def writeSentTxt(cfg, data):
         lines.append(line)
     try:
         import codecs
-        f = codecs.open(fn, mode, 'latin-1')
+        f = codecs.open(fn, mode, enc)
+        # f = open(fn, mode)
         f.writelines(lines)
         f.close()
     except:
@@ -200,12 +201,12 @@ def searchSentTxt(cfg, query, sortby):
     results = [a[1] for a in sorttmp]
     return results
 
-def ingestLBDB(fn):
+def ingestLBDB(fn, enc = 'utf-8'):
     """Imports sent mail history from LBDB."""
     try:
         fn = os.path.expanduser(fn)
         import codecs
-        fin = codecs.open(fn, 'r', 'latin-1')
+        fin = codecs.open(fn, 'r', enc)
         lines = fin.readlines()
         fin.close()
     except:
@@ -232,7 +233,7 @@ def dumpFile(data, fn):
         sys.exit(13)
     try:
         import codecs
-        f = codecs.open(fn, 'w', 'latin-1')
+        f = codecs.open(fn, 'w', 'utf-8')
         f.writelines(lines)
         f.close()
     except:
@@ -544,7 +545,7 @@ def main(argv=None):
     # don't return a value for either import_file or fetch - these modify the
     # data bbase and we will just write out the database after both of them.
     if args.import_file:
-        data = ingestLBDB(args.import_file)
+        data = ingestLBDB(args.import_file, 'latin-1')
 
     if args.fetch:
         # read our lines from stdin or the file passed
