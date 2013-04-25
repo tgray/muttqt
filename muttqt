@@ -187,7 +187,7 @@ class sentSQLData(dataSource):
         self.results = results
         self.data = results
 
-    def writeSentSQL(self):
+    def writeSent(self, data):
         """Write sent addresses to the SQL db."""
         cfg = self.cfg
         try:
@@ -202,7 +202,7 @@ class sentSQLData(dataSource):
         sql.commit()
         c.close()
 
-    def datePruneSentSQL(self, query):
+    def datePruneSent(self, query):
         """Remove addresses from sent SQL db prior to date.
 
         Date should be in YYYY-MM-DD format."""
@@ -817,8 +817,6 @@ def main(argv=None):
     if args.print_sent:
         sentSource.getAllSent()
         sentSource.printResults(numbered = True)
-        # results = getAllSent(cfg)
-        # printResults(results, numbered = True)
         return 0
 
     if args.write_config:
@@ -826,7 +824,7 @@ def main(argv=None):
         return 0
 
     if args.date_prune:
-        results = datePruneSent(cfg, args.date_prune)
+        results = sentSource.datePruneSent(args.date_prune)
         return 0
 
     if args.remove_sent:
@@ -834,8 +832,8 @@ def main(argv=None):
         return 0
 
     if args.dump_file:
-        results = getAllSent(cfg)
-        dumpFile(results, args.dump_file)
+        sentSource.getAllSent()
+        dumpFile(sentSource.results, args.dump_file)
         return 0
 
     # don't return a value for either import_file or fetch - these modify the
@@ -850,7 +848,7 @@ def main(argv=None):
         data = ingestEmail(lines)
 
     if args.fetch or args.import_file:
-        writeSent(cfg, data)
+        sentSource.writeSent(data)
         return 0
 
     if args.query:
