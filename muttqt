@@ -31,11 +31,12 @@ class dataSource(object):
     def printResults(self, numbered = False):
         """Print search results."""
         if numbered:
-            data = []
-            for i,d in enumerate(self.results):
-                t = [str(i),]
-                t.extend(d)
-                data.append(tuple(t))
+            # data = []
+            # for i,d in enumerate(self.results):
+            #     t = [str(i),]
+            #     t.extend(d[1:])
+            #     data.append(tuple(t))
+            data = [tuple(t) for t in self.results]
             fstr = "%s\t%s\t%s\t%s"
         else:
             data = self.results
@@ -88,6 +89,10 @@ class aliasData(dataSource):
                     addy = addy.translate(None, '\\')
                     if addy.find(',') == -1:
                         a = email.utils.parseaddr(addy)
+                        # If we don't have a name, let's take the first part of
+                        # the email address and use that
+                        if a[0] == '':
+                            a = (a[1].split('@')[0], a[1])
                         data.append((a[1], a[0], nick))
         self.data = data
 
@@ -209,6 +214,21 @@ class sentSQLData(dataSource):
             return
         q = "%s" % query.decode('utf-8')
         c.execute('delete from addresses where datetime(date) < ?', (q,))
+        sql.commit()
+        c.close()
+
+    def removeSent(self, rowids):
+        """Delete addresses from the SQL db.
+
+        Addresses to be deleted are specified by rowid."""
+        try:
+            sql = self.sql
+            c = self.c
+        except:
+            print 'no sent sql db'
+            return
+        for q in rowids:
+            c.execute('delete from addresses where rowid = ?', (q,))
         sql.commit()
         c.close()
 
@@ -810,7 +830,7 @@ def main(argv=None):
         return 0
 
     if args.remove_sent:
-        results = removeSent(cfg, args.remove_sent)
+        results = sentSource.removeSent(args.remove_sent)
         return 0
 
     if args.dump_file:
@@ -843,12 +863,15 @@ def main(argv=None):
         for helper in helpers:
             data = []
             if helper == 'mutt_alias':
-                aliasDat = readAliasFiles(cfg)
-                data = searchDat(aliasDat, query)
+                aliasDat = aliasData(cfg)
+                aliasDat.searchData(query)
+                data = aliasDat.results
+                # data.insert(0,( 'alias','---','---' ))
             elif helper in ['osx_abook','goobook',]:
                 extSource = extCommandData(cfg, helper)
                 extSource.searchData(query)
                 data = extSource.results
+                # data.insert(0,( 'osx','---','---' ))
                 # data = searchExtCommand(cfg, helper, query)
             elif helper == 'sent':
                 sortby = cfg.get('sent', 'sortby')
@@ -856,9 +879,10 @@ def main(argv=None):
                     sortby = args.sortby[0]
                 sentSource.searchData(query, sortby)
                 data = sentSource.results
+                # data.insert(0,( 'sent','---','---' ))
             else:
-                # this is risky, but we'll try to parse any other helpers in
-                # the config file as external commands
+                # this is potentially risky, but we'll try to parse any other
+                # helpers in the config file as external commands
                 try:
                     extSource = extCommandData(cfg, helper)
                     extSource.searchData(query)
