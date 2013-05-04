@@ -96,6 +96,109 @@ class aliasData(dataSource):
                         data.append((a[1], a[0], nick))
         self.data = data
 
+class sentTxtData(dataSource):
+    def __init__(self, cfg, datatype = 'senttxt', getData = True):
+        self.datatype = datatype
+        super(sentTxtData, self).__init__(cfg, getData = getData)
+
+    def getData(self):
+        """Gets all data in the sent txt file.
+
+        This file has the same format as an LBDB database."""
+        fn = self.cfg.get('sent', 'txtfile')
+        tempdat = ingestLBDB(fn)
+        data = []
+        for i,d in enumerate(tempdat):
+            t = [str(i),]
+            t.extend(d)
+            data.append(tuple(t))
+        self.data = data
+
+    def getAllSent(self):
+        self.results = self.data
+        
+    def datePruneSent(self, date):
+        """Remove addresses from sent txt file prior to date.
+
+        Date should be in YYYY-MM-DD format."""
+        self.getAllSent()
+        data = self.results
+        sorttmp = [(a[3], a, i) for i,a in enumerate(data)]
+        sorttmp.sort()
+        sorttmp.reverse()
+        from dateutil.parser import parse
+        d = parse(date)
+        for i,a in enumerate(sorttmp):
+            t = dt.datetime.strptime(a[0], sqldateformat)
+            if d > t:
+                break
+        sorttmp = sorttmp[:i]
+        results = [a[1] for a in sorttmp]
+        self.writeSent(results)
+
+    def removeSent(self, rowids):
+        """Delete addresses from the SQL txt file.
+
+        Addresses to be deleted are specified by rowid."""
+        rowids = [int(i) for i in rowids]
+        self.getAllSent()
+        data = self.results
+        pruned = [j for i,j in enumerate(data) if i not in rowids]
+        self.writeSent(pruned)
+
+    def writeSent(self, data, enc = 'utf-8'):
+        """Write sent addresses to the txt file.
+
+        This function looks for the number of columns in the data.  If there are 3,
+        we assume that the data was scraped from an email using ingestEmail, so the
+        file is opened up in append mode and the data just added to the end.  If
+        there are 4 columns, assume the data is either a full listing or a pruned
+        listing, so open the file up in write mode and overwrite the existing
+        data.
+
+        Note (as of now) that unlike the SQL version of this function, no attempt
+        is made to prune duplicate email entries."""
+        # this is hackish
+        if len(data[0]) == 3:
+            k = 0
+            mode = 'a'
+        elif len(data[0]) == 4:
+            k = 1
+            mode = 'w'
+        fn = self.cfg.get('sent', 'txtfile')
+        fn = os.path.expanduser(fn)
+        lines = []
+        for d in data:
+            t = dt.datetime.strptime(d[k+2], sqldateformat)
+            tmp = (d[k+0], d[k+1], t.strftime(lbdbdateformat))
+            line = '\t'.join(tmp) + '\n'
+            lines.append(line)
+        try:
+            import codecs
+            f = codecs.open(fn, mode, enc)
+            # f = open(fn, mode)
+            f.writelines(lines)
+            f.close()
+        except:
+            print "problem writing file %s" % fn
+            sys.exit(13)
+
+    def searchData(self, query, sortby):
+        """Query the sent address txt file.
+
+        Matches against name or email."""
+        fn = self.cfg.get('sent', 'txtfile')
+        data = ingestLBDB(fn)
+        results = searchDat(data, query)
+        o = {'email':0, 'name':1, 'date':2}
+        i = o[sortby]
+        sorttmp = [(a[i], a) for a in results]
+        sorttmp.sort()
+        if sortby == 'date':
+            sorttmp.reverse()
+        results = [a[1] for a in sorttmp]
+        self.results = results
+
 class sentSQLData(dataSource):
     def __init__(self, cfg, datatype = 'sentsql', getData = True):
         self.datatype = datatype
@@ -185,6 +288,8 @@ class sentSQLData(dataSource):
             result = (s[0], s[1], tmp)
             results.append(result)
         self.results = results
+        # stick our results into data too, since SQL object doesn't have any
+        # thing stored there until we do a search.
         self.data = results
 
     def writeSent(self, data):
@@ -235,7 +340,7 @@ class sentSQLData(dataSource):
 class extCommandData(dataSource):
     def __init__(self, cfg, helper, datatype = 'extCommand',
         getData = True):
-        self.datatype = datatype
+        
         self.helper = helper
         super(extCommandData, self).__init__(cfg, getData = getData)
 
@@ -286,12 +391,15 @@ class extCommandData(dataSource):
             helperText = self.helperText
             stdout = stdout.decode('utf-8')
             # split by line
-            results = stdout.rstrip().split('\n')
+            # results = stdout.rstrip().split('\n')
+            results = stdout.split('\n')
             if self.ignoreFirst:
                 results = results[1:]
             # split lines by tabs, removing any blank lines
             self.results = [list(r.split('\t')) for r in results if r != '']
             self.processResults()
+            # fill in blanks
+            self.results = [['-' if i == '' else i for i in r] for r in self.results]
             self.results = [tuple(r + [helperText,]) for r in self.results]
         else:
             self.results = []
@@ -399,99 +507,6 @@ def ingestEmail(lines):
 
     return data
 
-def getAllSentTxt(cfg):
-    """Gets all data in the sent txt file.
-
-    This file has the same format as an LBDB database."""
-    fn = cfg.get('sent', 'txtfile')
-    tempdat = ingestLBDB(fn)
-    data = []
-    for i,d in enumerate(tempdat):
-        t = [str(i),]
-        t.extend(d)
-        data.append(tuple(t))
-    return data
-
-def datePruneSentTxt(cfg, date):
-    """Remove addresses from sent txt file prior to date.
-
-    Date should be in YYYY-MM-DD format."""
-    data = getAllSentTxt(cfg)
-    sorttmp = [(a[3], a, i) for i,a in enumerate(data)]
-    sorttmp.sort()
-    sorttmp.reverse()
-    from dateutil.parser import parse
-    d = parse(date)
-    for i,a in enumerate(sorttmp):
-        t = dt.datetime.strptime(a[0], sqldateformat)
-        if d > t:
-            break
-    sorttmp = sorttmp[:i]
-    results = [a[1] for a in sorttmp]
-    writeSentTxt(cfg, results)
-
-def removeSentTxt(cfg, rowids):
-    """Delete addresses from the SQL txt file.
-
-    Addresses to be deleted are specified by rowid."""
-    rowids = [int(i) for i in rowids]
-    data = getAllSentTxt(cfg)
-    pruned = [j for i,j in enumerate(data) if i not in rowids]
-    writeSentTxt(cfg, pruned)
-
-def writeSentTxt(cfg, data, enc = 'utf-8'):
-    """Write sent addresses to the txt file.
-
-    This function looks for the number of columns in the data.  If there are 3,
-    we assume that the data was scraped from an email using ingestEmail, so the
-    file is opened up in append mode and the data just added to the end.  If
-    there are 4 columns, assume the data is either a full listing or a pruned
-    listing, so open the file up in write mode and overwrite the existing
-    data.
-
-    Note (as of now) that unlike the SQL version of this function, no attempt
-    is made to prune duplicate email entries."""
-    # this is hackish
-    if len(data[0]) == 3:
-        k = 0
-        mode = 'a'
-    elif len(data[0]) == 4:
-        k = 1
-        mode = 'w'
-    fn = cfg.get('sent', 'txtfile')
-    fn = os.path.expanduser(fn)
-    lines = []
-    for d in data:
-        t = dt.datetime.strptime(d[k+2], sqldateformat)
-        tmp = (d[k+0], d[k+1], t.strftime(lbdbdateformat))
-        line = '\t'.join(tmp) + '\n'
-        lines.append(line)
-    try:
-        import codecs
-        f = codecs.open(fn, mode, enc)
-        # f = open(fn, mode)
-        f.writelines(lines)
-        f.close()
-    except:
-        print "problem writing file %s" % fn
-        sys.exit(13)
-
-def searchSentTxt(cfg, query, sortby):
-    """Query the sent address txt file.
-
-    Matches against name or email."""
-    fn = cfg.get('sent', 'txtfile')
-    data = ingestLBDB(fn)
-    results = searchDat(data, query)
-    o = {'email':0, 'name':1, 'date':2}
-    i = o[sortby]
-    sorttmp = [(a[i], a) for a in results]
-    sorttmp.sort()
-    if sortby == 'date':
-        sorttmp.reverse()
-    results = [a[1] for a in sorttmp]
-    return results
-
 def ingestLBDB(fn, enc = 'utf-8'):
     """Imports sent mail history from LBDB."""
     try:
@@ -505,7 +520,7 @@ def ingestLBDB(fn, enc = 'utf-8'):
         sys.exit(13)
     data = []
     for line in lines:
-        print line.rstrip().split('\t')
+        # print line.rstrip().split('\t')
         a, n, t = line.rstrip().split('\t')
         t = dt.datetime.strptime(t, lbdbdateformat)
         data.append((a.lower(), n, t.strftime(sqldateformat)))
@@ -532,142 +547,6 @@ def dumpFile(data, fn):
         print "problem writing file %s" % fn
         sys.exit(13)
 
-def getSQL(cfg, make = False):
-    """Connect to the sent mail SQL db file."""
-    sqlfn = os.path.expanduser(cfg.get('sent', 'sqlfile'))
-    if not make and not os.path.exists(sqlfn):
-        return
-    sql = sqlite3.connect(sqlfn)
-    c = sql.cursor()
-    return sql, c
-
-def createTables(cfg):
-    """Creates the default table in the SQL db."""
-    try:
-        sql, c = getSQL(cfg, make = True)
-    except:
-        return []
-    tables = c.execute('select name from sqlite_master')
-    tlist = []
-    for table in tables:
-        tlist.append(table[0])
-    if 'addresses' not in tlist:
-        c.execute('create table addresses (email text, name text, date text)')
-        # think about not having the unique index be keyed to name as well
-        c.execute('create unique index "post_email" on addresses (email, name)')
-    return sql, c
-
-def writeSentSQL(cfg, data):
-    """Write sent addresses to the SQL db."""
-    try:
-        sql, c = getSQL(cfg)
-    except:
-        sql, c = createTables(cfg)
-    for d in data:
-        c.execute('insert or replace into addresses values (?, ?, ?)', d)
-    sql.commit()
-    c.close()
-
-def datePruneSentSQL(cfg, query):
-    """Remove addresses from sent SQL db prior to date.
-
-    Date should be in YYYY-MM-DD format."""
-    try:
-        sql, c = getSQL(cfg)
-    except:
-        return []
-    q = "%s" % query.decode('utf-8')
-    c.execute('delete from addresses where datetime(date) < ?', (q,))
-    sql.commit()
-    c.close()
-
-def removeSentSQL(cfg, rowids):
-    """Delete addresses from the SQL db.
-
-    Addresses to be deleted are specified by rowid."""
-    try:
-        sql, c = getSQL(cfg)
-    except:
-        return []
-    for q in rowids:
-        c.execute('delete from addresses where rowid = ?', (q,))
-    sql.commit()
-    c.close()
-
-def searchSentSQL(cfg, query, sortby = None):
-    """Query the sent address SQL db.
-
-    Matches against name or email."""
-    try:
-        sql, c = getSQL(cfg)
-    except:
-        return []
-    displaydateformat = cfg.get('sent', 'date-format', raw=True)
-    sortTerms = {
-        'email': 'email',
-        'name': 'name',
-        'date': 'date desc' }
-    s = sortTerms[sortby]
-    # I don't know why I can't use parameter substitution for the order by
-    # part.  I've made sure to ONLY accept email, name, or date as options
-    # which should be secure.  Hopefully.
-    q = "%%%s%%" % query.decode('utf-8')
-    c.execute('select email, name, date from addresses where name like ? or '
-        'email like ? order by ' + s, (q,q))
-    sqlchildren = c.fetchall()
-    c.close()
-    results = []
-    for s in sqlchildren:
-        tmp = dt.datetime.strptime(s[-1], sqldateformat)
-        tmp = tmp.strftime(displaydateformat)
-        # tmp += ' [sent]'
-        result = (s[0], s[1], tmp)
-        results.append(result)
-    return results
-
-def getAllSentSQL(cfg):
-    """Gets all data in the sent SQL db.
-
-    Entries are prefixed by the rowid of the entry and are sorted
-    alphabetically by email address."""
-    try:
-        sql, c = getSQL(cfg)
-    except:
-        print 'no sent sql db'
-        sys.exit(11)
-    c.execute('select rowid, email, name, date from addresses order by email')
-    sqlchildren = c.fetchall()
-    c.close()
-    results = [s for s in sqlchildren]
-    return results
-
-def readAliasFiles(cfg):
-    """Read data from mutt alias files."""
-    files = cfg.get('alias', 'files').split(',')
-    files = [os.path.expanduser(f.strip()) for f in files]
-
-    data = []
-    for fn in files:
-        try:
-            f = open(fn)
-            lines = f.readlines()
-            f.close()
-        except:
-            return []
-        # alias tgray1 Tim Gray <tgray1@swarthmore.edu>
-        for line in lines:
-            l = line.rstrip().split()
-            if l != [] and l[0] == 'alias':
-                stuff = l[1:]
-                nick = "%s [%s]" % (stuff[0], os.path.basename(fn))
-                addy = " ".join(stuff[1:])
-                # some addresses seem to have escaped " - get rid of them
-                addy = addy.translate(None, '\\')
-                if addy.find(',') == -1:
-                    a = email.utils.parseaddr(addy)
-                    data.append((a[1], a[0], nick))
-    return data
-
 def searchDat(data, query):
     """Search list data for query."""
     results = []
@@ -675,38 +554,6 @@ def searchDat(data, query):
     for l in data:
         if l[0].lower().find(query) > -1 or l[1].lower().find(query) > -1:
             results.append(l)
-    return results
-
-def searchExtCommand(cfg, helper, query):
-    """Search with an external command.
-
-    Depends on an the external program that returns data in the proper
-    format.  The command is set up in the config file.  The proper format for
-    returned data is the same as the mutt query command expects except with out
-    the header line."""
-    cmd = cfg.get(helper, 'cmd')
-    try:
-        helperText = cfg.get(helper, 'text')
-    except:
-        helperText = helper
-
-    cmd = os.path.expanduser(cmd)
-    cmd = '%s %s' % (cmd, query)
-    c = shlex.split(cmd)
-    try:
-        proc = sp.Popen(c , stdout = sp.PIPE, stderr = sp.PIPE)
-    except:
-        results = []
-        return results
-    stdout, stderr = proc.communicate()
-    if stdout:
-        helperText = '\t%s' % helperText
-        stdout = stdout.decode('utf-8')
-        results = stdout.rstrip().split('\n')
-        results = [r + helperText for r in results if r != '']
-        results = [tuple(r.split('\t')) for r in results]
-    else:
-        results = []
     return results
 
 def printResults(results, numbered = False):
@@ -807,7 +654,7 @@ def main(argv=None):
         # writeSent = writeSentSQL
         # searchSent = searchSentSQL
     elif sentFileFormat == 'text':
-        sentSource = sentSQLData(cfg)
+        sentSource = sentTxtData(cfg)
         # getAllSent = getAllSentTxt
         # datePruneSent = datePruneSentTxt
         # removeSent = removeSentTxt
