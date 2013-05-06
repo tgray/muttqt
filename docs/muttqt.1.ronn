@@ -18,6 +18,8 @@ addresses that you have sent emails too, as well as functionality to communicate
 with other external tools, such as `contacts`, `goobook`, and `mu` (see [SEE
 ALSO][]).
 
+`muttqt` requires `python` and `sqlite3`.  It has been tested with `python` 2.7,
+but should work with earlier versions.
 
 ## OPTIONS ##
 
@@ -111,12 +113,13 @@ See the *mutt-sendmail.bash* for an implementation of the `tee` method and
 *mutt-sendmail.sh* for an implementation of the temporary file method.  Both
 scripts can be found in the *scripts* directory of the source distribution, or
 in the */usr/local/share/muttqt* directory.  *Note*: The temporary file method
-is dependant upon the OS's implementation of `mktemp`, so be sure to check
+is dependent upon the OS's implementation of `mktemp`, so be sure to check
 `mktemp`(1).
 
 ## SEE ALSO ##
 
-`mutt`(1), `mu`(1), `mu-cfind`(1), `contacts`(1), `tee`(1), `mktemp`(1)
+`mutt`(1), `mu`(1), `mu-cfind`(1), `contacts`(1), `tee`(1), `mktemp`(1),
+`python`(1), `sqlite3`(1)
 
 ### links ###
 

@@ -16,6 +16,9 @@ with other external tools, such as:
 - [goobook][] - a Python program that accesses your Google contacts
 - [mu][] - mu's cfind command, part of the maildir indexing tool
 
+`muttqt` requires `python` and `sqlite3`.  It has been tested with `python` 2.7,
+but should work with earlier versions.
+
 ## Advantages over lbdb ##
 
 - Actively supported.

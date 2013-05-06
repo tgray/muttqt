@@ -24,6 +24,9 @@
 .P
 \fBmuttqt\fR currently interfaces with mutt alias files, a database of email addresses that you have sent emails too, as well as functionality to communicate with other external tools, such as \fBcontacts\fR, \fBgoobook\fR, and \fBmu\fR (see \fISEE ALSO\fR)\.
 .
+.P
+\fBmuttqt\fR requires \fBpython\fR and \fBsqlite3\fR\. It has been tested with \fBpython\fR 2\.7, but should work with earlier versions\.
+.
 .SH "OPTIONS"
 The options are as follows:
 .
@@ -113,7 +116,7 @@ The \fBmuttqt \-f\fR command provides a method of searching the \fITo\fR, \fICC\
 See the \fImutt\-sendmail\.bash\fR for an implementation of the \fBtee\fR method and \fImutt\-sendmail\.sh\fR for an implementation of the temporary file method\. Both scripts can be found in the \fIscripts\fR directory of the source distribution, or in the \fI/usr/local/share/muttqt\fR directory\. \fINote\fR: The temporary file method is dependant upon the OS\'s implementation of \fBmktemp\fR, so be sure to check \fBmktemp\fR(1)\.
 .
 .SH "SEE ALSO"
-\fBmutt\fR(1), \fBmu\fR(1), \fBmu\-cfind\fR(1), \fBcontacts\fR(1), \fBtee\fR(1), \fBmktemp\fR(1)
+\fBmutt\fR(1), \fBmu\fR(1), \fBmu\-cfind\fR(1), \fBcontacts\fR(1), \fBtee\fR(1), \fBmktemp\fR(1), \fBpython\fR(1), \fBsqlite3\fR(1)
 .
 .SS "links"
 \fBmutt\fR: \fIhttp://www\.mutt\.org\fR
