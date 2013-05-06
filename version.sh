@@ -75,11 +75,14 @@ else
     # echo "#define AUTOVERSION $lastRepoTag" >> $gitDataFile
 fi
 
-version="${lastRepoTag}-${lastCommitHash}"
+version="${lastRepoTag}"
+commit="${lastCommitHash}"
+echo $commit
 
 if [ -f "$1" ]
 then
     echo "Modifying $1"
+	sed -i .bak -E "s/^(__commit__ = )(None)$/\1\"${commit}\"/" $1 || exit 3
 	sed -i .bak -E "s/^(__version__ = )\"([^\"]*)\"/\1\"${version}\"/" $1 || exit 3
     rm $1.bak
 elif [ -z "$1" ]

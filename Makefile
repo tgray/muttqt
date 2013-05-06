@@ -11,7 +11,7 @@ mans = $(addprefix $(docsdir)/,*.1)
 # distribution variables
 VERSIONNUM:=$(shell test -d .git && git describe --abbrev=0 --tags)
 BUILDNUM:=$(shell test -d .git && git rev-parse --short HEAD)
-distdir = $(project)-$(VERSIONNUM)-$(BUILDNUM)
+distdir = $(project)-$(VERSIONNUM)
 
 # ronn/man variables
 rdate = `date +'%Y-%m-%d'`

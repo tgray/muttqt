@@ -16,6 +16,7 @@ import shlex
 from ConfigParser import ConfigParser
 
 __version__ = "0.1.0"
+__commit__ = None
 
 # constants
 configfile = '~/.muttqt/muttqt.conf'
@@ -589,7 +590,7 @@ def main(argv=None):
 
     parser.add_argument('-V', '--version',
         action = "version",
-        version = "%(prog)s " + __version__,
+        version = "%(prog)s " + "{0} ({1})".format(__version__, __commit__),
         help = 'prints version')
 
     parser.add_argument('-f', '--fetch',
