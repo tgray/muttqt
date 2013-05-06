@@ -420,25 +420,30 @@ def configDefaults():
     or if the config file doesn't exist."""
     parser = ConfigParser()
     parser.add_section('global')
-    parser.add_section('sent')
-    parser.add_section('alias')
-    parser.add_section('osx_abook')
-    parser.add_section('goobook')
     parser.set('global', 'helpers', 'mutt_alias, sent')
-    parser.set('osx_abook', 'cmd', 'contacts -m')
-    parser.set('osx_abook', 'text', 'Address Book')
-    parser.set('osx_abook', 'cols', '0,1')
-    parser.set('osx_abook', 'ignore_first', 'True')
-    parser.set('goobook', 'cmd', 'goobook query')
-    parser.set('goobook', 'text', 'Google')
-    parser.set('goobook', 'cols', '0,1')
-    parser.set('goobook', 'ignore_first', 'True')
+    parser.add_section('alias')
     parser.set('alias', 'files', '~/.mutt/aliases')
+    parser.add_section('sent')
     parser.set('sent', 'format', 'sql')
     parser.set('sent', 'sortby', 'date')
     parser.set('sent', 'sqlfile', '~/.muttqt/sent.sqlite3')
     parser.set('sent', 'txtfile', '~/.muttqt/sent.txt')
     parser.set('sent', 'date-format', '%Y-%m-%d')
+    parser.add_section('osx_abook')
+    parser.set('osx_abook', 'cmd', 'contacts -m')
+    parser.set('osx_abook', 'text', 'Address Book')
+    parser.set('osx_abook', 'cols', '0,1')
+    parser.set('osx_abook', 'ignore_first', 'True')
+    parser.add_section('goobook')
+    parser.set('goobook', 'cmd', 'goobook query')
+    parser.set('goobook', 'text', 'Google')
+    parser.set('goobook', 'cols', '0,1')
+    parser.set('goobook', 'ignore_first', 'True')
+    parser.add_section('mu')
+    parser.set('mu', 'cmd', 'mu cfind -o mutt-ab')
+    parser.set('mu', 'text', 'mu')
+    parser.set('mu', 'cols', '0,1')
+    parser.set('mu', 'ignore_first', 'on')
     return parser
 
 def configWrite(parser):
@@ -628,9 +633,9 @@ def main(argv=None):
 
     parser.add_argument('--date-prune',
         dest = 'date_prune',
-        metavar = 'DATE',
+        metavar = 'YYYY-MM-DD',
         default = False,
-        help = 'prune all entries prior to DATE')
+        help = 'prune all entries prior to YYYY-MM-DD')
 
     parser.add_argument('--write-config',
         dest = 'write_config',

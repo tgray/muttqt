@@ -1,0 +1,140 @@
+muttqt(1) -- Mutt query tool.
+=============================
+
+## SYNOPSIS ##
+
+`muttqt` [`-h`] [`-q` <query>] [`-f` <FETCH_FILE>] [`-s` <SORTBY>]  
+&nbsp;&nbsp;[`-i` <IMPORT_FILE>] [`-d` <DUMP_FILE>] [`--print-sent`]  
+&nbsp;&nbsp;[`--remove-sent` <ROWID,ROWID2,...>] [`--date-prune` <YYYY-MM-DD>]  
+&nbsp;&nbsp;[`--write-config`]
+
+## DESCRIPTION ##
+
+`muttqt` is a command line program to facilitate querying various email address
+storage solutions from `mutt`.  It is designed to be called by `mutt`'s *query_command*.
+
+`muttqt` currently interfaces with mutt alias files, a database of email
+addresses that you have sent emails too, as well as functionality to communicate
+with other external tools, such as `contacts`, `goobook`, and `mu` (see [SEE
+ALSO][]).
+
+
+## OPTIONS ##
+
+The options are as follows:
+
+* `-h`, `--help`:
+  Display help.
+
+* `-q`, `--query`:
+  Queries the database.
+
+* `-f` [<file>], `--fetch` [<file>]:
+  Fetch addressees from a file.  If no file is given, stdin is used.
+
+* `-s`, `--sort`:
+  Sets the sort order of sent address results.  Valid choices are 'email',
+  'date', or 'name'.
+
+* `-i` <file>, `--import` <file>:
+  Import addresses from an `lbdb` m\_inmail file.  Can also be used to reimport
+  files that were exported with the `--dump` command.
+
+* `-d` <file>, `--dump` <file>:
+  Export sent addresses from the Sqlite3 database to an `lbdb` compatible text
+  file.
+
+* `--print-sent`:
+  Prints out the sent history database.  Each entry is preceded with the rowid
+  of the entry.  This rowid can be used in conjunction with the `--remove-sent`
+  option.
+
+* `--remove-sent` <rowid>[,<rowid2>,...]:
+  Remove entries by <rowid> from the sent history database.
+
+* `--date-prune` <YYYY-MM-DD>:
+  Remove all entries before the date <YYYY-MM-DD> from the sent history
+  database.
+
+* `--write-config`:
+  Writes out a default configuration file to *~/.muttqt/muttqt.conf*.
+
+## CONFIGURATION ##
+
+`muttqt`'s configuration and data files are stored in the *~/.muttqt* directory.  The configuration is called *muttqt.conf*.  To generate a default configuration file, run `muttqt --write-config`.
+
+`muttqt` is setup to utilise an Sqlite3 database for it's sent email address storage.  This can be changed to a flat text file that is `lbdb` compatible by changing the 'format' parameter in the 'sent' section to 'text'.
+
+## EXAMPLE USAGE ##
+
+### Importing your lbdb sent addresses ###
+
+Run the following (pointing the command at the appropriate file):  
+`muttqt -i ~/.lbdb/m_inmail.list`
+
+### Exporting the sent SQL database ###
+
+Running the following will produce an `lbdb` compatible file:  
+`muttqt -d output.txt`  
+
+This file can be edited and reimported to `muttqt` in the same manner as an
+`lbdb` sent address file.
+
+### Editing and pruning the databse ###
+
+Running `muttqt --print-sent` will display every address in the sent mail
+database, prefixed by the SQL row id.  If you would like to remove a specific
+set of addresses, run `muttqt --remove-sent row_id`, where *row_id* are
+the row ids of the addresses you would like to remove, separated by commas.
+
+If you would like to remove all addresses last used before a certain date, run
+`muttqt --date-prune date` where *date* is in a YYYY-MM-DD format.
+
+## MUTT CONFIGURATION ##
+
+## Setting up mutt ##
+
+### Querying ###
+
+To configure `mutt` to use `muttqt`, set the following in your muttrc file:  
+`set query_command="/usr/local/bin/muttqt -q '%s'"`
+
+### Setting up sent email integration ###
+
+The `muttqt -f` command provides a method of searching the *To*, *CC*, or *BCC*
+headers of input data.  An easy way to automate address capture is to set the
+mutt <sendmail> command to a wrapper script.  Either use the `tee` command to
+split the input message to both `muttqt` and your sendmail program, or copy the
+input mail to a temporary file.
+
+See the *mutt-sendmail.bash* for an implementation of the `tee` method and
+*mutt-sendmail.sh* for an implementation of the temporary file method.  Both
+scripts can be found in the *scripts* directory of the source distribution, or
+in the */usr/local/share/muttqt* directory.  *Note*: The temporary file method
+is dependant upon the OS's implementation of `mktemp`, so be sure to check
+`mktemp`(1).
+
+## SEE ALSO ##
+
+`mutt`(1), `mu`(1), `mu-cfind`(1), `contacts`(1), `tee`(1), `mktemp`(1)
+
+### links ###
+
+`mutt`: <http://www.mutt.org>  
+`lbdb`: <http://www.spinnaker.de/lbdb/>  
+
+### helper programs ###
+`contacts` homepage: <https://github.com/tgray/contacts>  
+`goobook`: <https://pypi.python.org/pypi/goobook/>  
+`mu`: <http://www.djcbsoftware.nl/code/mu/>  
+
+### mutt settings ###
+
+<query\_command>: <http://dev.mutt.org/doc/manual.html#query>  
+<sendmail>: <http://dev.mutt.org/doc/manual.html#sendmail>  
+
+## AUTHOR ##
+
+`muttqt` is written by Tim Gray.
+
+The `muttqt` homepage is located on github at <https://github.com/tgray/muttqt>.

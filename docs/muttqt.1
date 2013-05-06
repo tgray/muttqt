@@ -1,0 +1,143 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "MUTTQT" "1" "May 2013" "protozoic" "muttqt"
+.
+.SH "NAME"
+\fBmuttqt\fR \- Mutt query tool\.
+.
+.SH "SYNOPSIS"
+\fBmuttqt\fR [\fB\-h\fR] [\fB\-q\fR \fIquery\fR] [\fB\-f\fR \fIFETCH_FILE\fR] [\fB\-s\fR \fISORTBY\fR]
+.
+.br
+\~\~[\fB\-i\fR \fIIMPORT_FILE\fR] [\fB\-d\fR \fIDUMP_FILE\fR] [\fB\-\-print\-sent\fR]
+.
+.br
+\~\~[\fB\-\-remove\-sent\fR <ROWID,ROWID2,\.\.\.>] [\fB\-\-date\-prune\fR \fIYYYY\-MM\-DD\fR]
+.
+.br
+\~\~[\fB\-\-write\-config\fR]
+.
+.SH "DESCRIPTION"
+\fBmuttqt\fR is a command line program to facilitate querying various email address storage solutions from \fBmutt\fR\. It is designed to be called by \fBmutt\fR\'s \fIquery_command\fR\.
+.
+.P
+\fBmuttqt\fR currently interfaces with mutt alias files, a database of email addresses that you have sent emails too, as well as functionality to communicate with other external tools, such as \fBcontacts\fR, \fBgoobook\fR, and \fBmu\fR (see \fISEE ALSO\fR)\.
+.
+.SH "OPTIONS"
+The options are as follows:
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display help\.
+.
+.TP
+\fB\-q\fR, \fB\-\-query\fR
+Queries the database\.
+.
+.TP
+\fB\-f\fR [\fIfile\fR], \fB\-\-fetch\fR [\fIfile\fR]
+Fetch addressees from a file\. If no file is given, stdin is used\.
+.
+.TP
+\fB\-s\fR, \fB\-\-sort\fR
+Sets the sort order of sent address results\. Valid choices are \'email\', \'date\', or \'name\'\.
+.
+.TP
+\fB\-i\fR \fIfile\fR, \fB\-\-import\fR \fIfile\fR
+Import addresses from an \fBlbdb\fR m_inmail file\. Can also be used to reimport files that were exported with the \fB\-\-dump\fR command\.
+.
+.TP
+\fB\-d\fR \fIfile\fR, \fB\-\-dump\fR \fIfile\fR
+Export sent addresses from the Sqlite3 database to an \fBlbdb\fR compatible text file\.
+.
+.TP
+\fB\-\-print\-sent\fR
+Prints out the sent history database\. Each entry is preceded with the rowid of the entry\. This rowid can be used in conjunction with the \fB\-\-remove\-sent\fR option\.
+.
+.TP
+\fB\-\-remove\-sent\fR \fIrowid\fR[,\fIrowid2\fR,\.\.\.]
+Remove entries by \fIrowid\fR from the sent history database\.
+.
+.TP
+\fB\-\-date\-prune\fR \fIYYYY\-MM\-DD\fR
+Remove all entries before the date \fIYYYY\-MM\-DD\fR from the sent history database\.
+.
+.TP
+\fB\-\-write\-config\fR
+Writes out a default configuration file to \fI~/\.muttqt/muttqt\.conf\fR\.
+.
+.SH "CONFIGURATION"
+\fBmuttqt\fR\'s configuration and data files are stored in the \fI~/\.muttqt\fR directory\. The configuration is called \fImuttqt\.conf\fR\. To generate a default configuration file, run \fBmuttqt \-\-write\-config\fR\.
+.
+.P
+\fBmuttqt\fR is setup to utilise an Sqlite3 database for it\'s sent email address storage\. This can be changed to a flat text file that is \fBlbdb\fR compatible by changing the \'format\' parameter in the \'sent\' section to \'text\'\.
+.
+.SH "EXAMPLE USAGE"
+.
+.SS "Importing your lbdb sent addresses"
+Run the following (pointing the command at the appropriate file):
+.
+.br
+\fBmuttqt \-i ~/\.lbdb/m_inmail\.list\fR
+.
+.SS "Exporting the sent SQL database"
+Running the following will produce an \fBlbdb\fR compatible file:
+.
+.br
+\fBmuttqt \-d output\.txt\fR
+.
+.P
+This file can be edited and reimported to \fBmuttqt\fR in the same manner as an \fBlbdb\fR sent address file\.
+.
+.SS "Editing and pruning the databse"
+Running \fBmuttqt \-\-print\-sent\fR will display every address in the sent mail database, prefixed by the SQL row id\. If you would like to remove a specific set of addresses, run \fBmuttqt \-\-remove\-sent row_id\fR, where \fIrow_id\fR are the row ids of the addresses you would like to remove, separated by commas\.
+.
+.P
+If you would like to remove all addresses last used before a certain date, run \fBmuttqt \-\-date\-prune date\fR where \fIdate\fR is in a YYYY\-MM\-DD format\.
+.
+.SH "MUTT CONFIGURATION"
+.
+.SH "Setting up mutt"
+.
+.SS "Querying"
+To configure \fBmutt\fR to use \fBmuttqt\fR, set the following in your muttrc file:
+.
+.br
+\fBset query_command="/usr/local/bin/muttqt \-q \'%s\'"\fR
+.
+.SS "Setting up sent email integration"
+The \fBmuttqt \-f\fR command provides a method of searching the \fITo\fR, \fICC\fR, or \fIBCC\fR headers of input data\. An easy way to automate address capture is to set the mutt \fIsendmail\fR command to a wrapper script\. Either use the \fBtee\fR command to split the input message to both \fBmuttqt\fR and your sendmail program, or copy the input mail to a temporary file\.
+.
+.P
+See the \fImutt\-sendmail\.bash\fR for an implementation of the \fBtee\fR method and \fImutt\-sendmail\.sh\fR for an implementation of the temporary file method\. Both scripts can be found in the \fIscripts\fR directory of the source distribution, or in the \fI/usr/local/share/muttqt\fR directory\. \fINote\fR: The temporary file method is dependant upon the OS\'s implementation of \fBmktemp\fR, so be sure to check \fBmktemp\fR(1)\.
+.
+.SH "SEE ALSO"
+\fBmutt\fR(1), \fBmu\fR(1), \fBmu\-cfind\fR(1), \fBcontacts\fR(1), \fBtee\fR(1), \fBmktemp\fR(1)
+.
+.SS "links"
+\fBmutt\fR: \fIhttp://www\.mutt\.org\fR
+.
+.br
+\fBlbdb\fR: \fIhttp://www\.spinnaker\.de/lbdb/\fR
+.
+.SS "helper programs"
+\fBcontacts\fR homepage: \fIhttps://github\.com/tgray/contacts\fR
+.
+.br
+\fBgoobook\fR: \fIhttps://pypi\.python\.org/pypi/goobook/\fR
+.
+.br
+\fBmu\fR: \fIhttp://www\.djcbsoftware\.nl/code/mu/\fR
+.
+.SS "mutt settings"
+\fIquery_command\fR: \fIhttp://dev\.mutt\.org/doc/manual\.html#query\fR
+.
+.br
+\fIsendmail\fR: \fIhttp://dev\.mutt\.org/doc/manual\.html#sendmail\fR
+.
+.SH "AUTHOR"
+\fBmuttqt\fR is written by Tim Gray\.
+.
+.P
+The \fBmuttqt\fR homepage is located on github at \fIhttps://github\.com/tgray/muttqt\fR\.
