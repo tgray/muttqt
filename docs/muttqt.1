@@ -113,7 +113,7 @@ To configure \fBmutt\fR to use \fBmuttqt\fR, set the following in your muttrc fi
 The \fBmuttqt \-f\fR command provides a method of searching the \fITo\fR, \fICC\fR, or \fIBCC\fR headers of input data\. An easy way to automate address capture is to set the mutt \fIsendmail\fR command to a wrapper script\. Either use the \fBtee\fR command to split the input message to both \fBmuttqt\fR and your sendmail program, or copy the input mail to a temporary file\.
 .
 .P
-See the \fImutt\-sendmail\.bash\fR for an implementation of the \fBtee\fR method and \fImutt\-sendmail\.sh\fR for an implementation of the temporary file method\. Both scripts can be found in the \fIscripts\fR directory of the source distribution, or in the \fI/usr/local/share/muttqt\fR directory\. \fINote\fR: The temporary file method is dependant upon the OS\'s implementation of \fBmktemp\fR, so be sure to check \fBmktemp\fR(1)\.
+See the \fImutt\-sendmail\.bash\fR for an implementation of the \fBtee\fR method and \fImutt\-sendmail\.sh\fR for an implementation of the temporary file method\. Both scripts can be found in the \fIscripts\fR directory of the source distribution, or in the \fI/usr/local/share/muttqt\fR directory\. \fINote\fR: The temporary file method is dependent upon the OS\'s implementation of \fBmktemp\fR, so be sure to check \fBmktemp\fR(1)\.
 .
 .SH "SEE ALSO"
 \fBmutt\fR(1), \fBmu\fR(1), \fBmu\-cfind\fR(1), \fBcontacts\fR(1), \fBtee\fR(1), \fBmktemp\fR(1), \fBpython\fR(1), \fBsqlite3\fR(1)

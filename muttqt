@@ -15,6 +15,7 @@ import subprocess as sp
 import shlex
 from ConfigParser import ConfigParser
 
+__version__ = "0.1.0"
 
 # constants
 configfile = '~/.muttqt/muttqt.conf'
@@ -586,6 +587,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description = 'Scrape email addresses from emails.')
 
+    parser.add_argument('-V', '--version',
+        action = "version",
+        version = "%(prog)s " + __version__,
+        help = 'prints version')
+
     parser.add_argument('-f', '--fetch',
         dest = 'fetch',
         metavar = 'FETCH_FILE',
@@ -647,7 +653,6 @@ def main(argv=None):
 
     # get configuration data
     cfg = configRead()
-
 
     sentFileFormat = cfg.get('sent', 'format')
 

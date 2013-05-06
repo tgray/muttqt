@@ -31,9 +31,10 @@ test:
 $(binsubdir):
 	-mkdir -p $(binsubdir)
 
-# copy to bindir
+# copy to bindir and replace version in file
 muttqt: $(binsubdir)
 	cp muttqt $(binsubdir)/
+	./version.sh $(binsubdir)/muttqt
 
 # install files to their proper locations.
 install: all
