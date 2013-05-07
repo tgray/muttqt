@@ -9,7 +9,8 @@ mandir ?= $(prefix)/share/man/man1
 mans = $(addprefix $(docsdir)/,*.1)
 
 # distribution variables
-VERSIONNUM:=$(shell test -d .git && git describe --abbrev=0 --tags)
+# VERSIONNUM:=$(shell test -d .git && git describe --abbrev=0 --tags)
+VERSIONNUM:=$(shell grep '^__version' muttqt | cut -d '"' -f2)
 BUILDNUM:=$(shell test -d .git && git rev-parse --short HEAD)
 distdir = $(project)-$(VERSIONNUM)
 
@@ -26,6 +27,9 @@ test:
 	echo $(VERSIONNUM)
 	echo ${prefix}
 	echo ${mandir}
+
+gtag:
+	git tag -am "muttqt $(VERSIONNUM)" $(VERSIONNUM)
 
 # make bin/
 $(binsubdir):

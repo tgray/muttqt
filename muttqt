@@ -15,7 +15,7 @@ import subprocess as sp
 import shlex
 from ConfigParser import ConfigParser
 
-__version__ = "0.1.0"
+__version__ = "0.1.0b1"
 __commit__ = None
 
 # constants
