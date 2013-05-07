@@ -28,6 +28,34 @@ but should work with earlier versions.
   file (lbdb-compatible).
 - UTF-8 support.  
 
+## Installing ##
+
+One can copy the `muttqt` python file to your path to install.  Alternately, it
+can be installed by running
+
+    make
+    make install
+
+If you would like to install it in a location other than */usr/local*, use the
+prefix setting when running `make install` like so:
+
+    make prefix=/path/to/install install
+
+On OS X, you will probably also want to install the `contacts` program.  It can
+be installed easily by using [homebrew][]:
+
+    brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
+
+## Configuring ##
+
+muttqt's configuration and data files are stored in the `~/.muttqt` directory.
+The configuration is called `muttqt.conf`.  To generate a default configuration
+file, run `muttqt --write-config`.
+
+muttqt is setup to utilise an Sqlite3 database for it's sent email address
+storage.  This can be changed to a flat text file that is lbdb compatible by
+changing the 'format' parameter in the 'sent' section to 'text'.
+
 ## Example Usage ##
 
 This returns all matches for *somename* from all of your configured data sources:
@@ -39,7 +67,8 @@ and store them in the sent address data file.
 
     cat email.txt | muttqt -f
 
-To automate this harvesting of emails, see the section "Setting up sent email integration".
+To automate this harvesting of emails, see the section "Setting up sent email
+integration".
 
 ## Setting up mutt ##
 
@@ -78,28 +107,8 @@ with your email message before sending:
     rm -f $t
 
 The above script works on OS X.  One might need to change the `mktemp` command
-to work on other OSes.  These scripts can be found in the *scripts* directory of the source distribution, or in the */usr/local/share/muttqt* directory.
-
-## Installing ##
-
-One can copy the `muttqt` python file to your path to install.  Alternately, it can be installed by running
-
-    make
-    make install
-
-If you would like to install it in a location other than */usr/local*, use the prefix setting when running `make install` like so:
-
-    make prefix=/path/to/install install
-
-On OS X, you will probably also want to install the `contacts` program.  It can be installed easily by using [homebrew][]:
-
-    brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
-
-## Configuring ##
-
-muttqt's configuration and data files are stored in the `~/.muttqt` directory.  The configuration is called `muttqt.conf`.  To generate a default configuration file, run `muttqt --write-config`.
-
-muttqt is setup to utilise an Sqlite3 database for it's sent email address storage.  This can be changed to a flat text file that is lbdb compatible by changing the 'format' parameter in the 'sent' section to 'text'.
+to work on other OSes.  These scripts can be found in the *scripts* directory of
+the source distribution, or in the */usr/local/share/muttqt* directory.
 
 ## Other commands ##
 
@@ -120,7 +129,10 @@ This file can be edited and reimported to `muttqt` in the same manner as an
 
 ### Editing and pruning the databse ###
 
-Running `muttqt --print-sent` will display every address in the sent mail database, prefixed by the SQL row id.  If you would like to remove a specific set of addresses, run `muttqt --remove-sent row_id`, where *row_id* are the row ids of the addresses you would like to remove, separated by commas.
+Running `muttqt --print-sent` will display every address in the sent mail
+database, prefixed by the SQL row id.  If you would like to remove a specific
+set of addresses, run `muttqt --remove-sent row_id`, where *row_id* are the row
+ids of the addresses you would like to remove, separated by commas.
 
 If you would like to remove all addresses last used before a certain date, run:
 
@@ -130,9 +142,16 @@ where *date* is in a YYYY-MM-DD format.
 
 ## Motivation ##
 
-I've used [lbdb][] for years, but began to have problems compiling the Mac OS X Address Book tool since it [lbdb][] is basically abandoned.  I went so far as to actually pick it up, hack on it a bit, and put [my version][tglbdb] on github.  This is the version that can be found on the [homebrew][] packaging system for Mac OS X.
+I've used [lbdb][] for years, but began to have problems compiling the Mac OS X
+Address Book tool since it [lbdb][] is basically abandoned.  I went so far as to
+actually pick it up, hack on it a bit, and put [my version][tglbdb] on github.
+This is the version that can be found on the [homebrew][] packaging system for
+Mac OS X.
 
-So, I decided I could probably write a stripped down, easy-to-maintain version in Python.  All I needed to do was write a small Objective C tool to interface with the Mac OS X Address Book ([done][contacts]) and then hack a bit at the Python code.
+So, I decided I could probably write a stripped down, easy-to-maintain version
+in Python.  All I needed to do was write a small Objective C tool to interface
+with the Mac OS X Address Book ([done][contacts]) and then hack a bit at the
+Python code.
 
 
 [mutt]: http://www.mutt.org
@@ -155,4 +174,5 @@ The muttqt homepage can be located on github at <https://github.com/tgray/muttqt
 
 ## License ##
 
-`contacts` is released under an Apache License 2.0.  Please see the `LICENSE.markdown` file included with the distribution.
+`muttqt` is released under an Apache License 2.0.  Please see the
+`LICENSE.markdown` file included with the distribution.
