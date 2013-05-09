@@ -143,7 +143,7 @@ where *date* is in a YYYY-MM-DD format.
 ## Motivation ##
 
 I've used [lbdb][] for years, but began to have problems compiling the Mac OS X
-Address Book tool since it [lbdb][] is basically abandoned.  I went so far as to
+Address Book tool since [lbdb][] is basically abandoned.  I went so far as to
 actually pick it up, hack on it a bit, and put [my version][tglbdb] on github.
 This is the version that can be found on the [homebrew][] packaging system for
 Mac OS X.
@@ -168,7 +168,7 @@ Python code.
 
 muttqt is written by [Tim Gray][tggit].  It's obviously inspired by [lbdb][].
 
-The muttqt homepage can be located on github at <https://github.com/tgray/muttqt>.
+The muttqt homepage can be located on github at <http://tgray.github.io/muttqt/>.
 
 [tggit]: https://github.com/tgray
 
