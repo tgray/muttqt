@@ -45,6 +45,12 @@ prefix setting when running `make install` like so:
 make prefix=/path/to/install install
 ```
 
+For now, you can also install via [homebrew][] on OS X.  The formula is not yet in the [homebrew][] main repository, so it can be installed from my github page:
+
+```sh
+brew install https://raw.github.com/tgray/homebrew-tgbrew/master/muttqt.rb
+```
+
 On OS X, you will probably also want to install the `contacts` program.  It can
 be installed easily by using [homebrew][]:
 
