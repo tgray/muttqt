@@ -33,18 +33,24 @@ but should work with earlier versions.
 One can copy the `muttqt` python file to your path to install.  Alternately, it
 can be installed by running
 
-    make
-    make install
+```sh
+make
+make install
+```
 
 If you would like to install it in a location other than */usr/local*, use the
 prefix setting when running `make install` like so:
 
-    make prefix=/path/to/install install
+```sh
+make prefix=/path/to/install install
+```
 
 On OS X, you will probably also want to install the `contacts` program.  It can
 be installed easily by using [homebrew][]:
 
-    brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
+```sh
+brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
+```
 
 ## Configuring ##
 
@@ -60,12 +66,16 @@ changing the 'format' parameter in the 'sent' section to 'text'.
 
 This returns all matches for *somename* from all of your configured data sources:
 
-    muttqt -q somename
+```sh
+muttqt -q somename
+```
 
 The following usage will store any email address in the To, CC, or BCC headers
 and store them in the sent address data file.
 
-    cat email.txt | muttqt -f
+```sh
+cat email.txt | muttqt -f
+```
 
 To automate this harvesting of emails, see the section "Setting up sent email
 integration".
@@ -76,7 +86,9 @@ integration".
 
 To configure mutt to use muttqt, set the following in your muttrc file:
 
-    set query_command="/usr/local/bin/muttqt -q '%s'"
+```sh
+set query_command="/usr/local/bin/muttqt -q '%s'"
+```
 
 ### Setting up sent email integration ###
 
@@ -84,27 +96,31 @@ The `muttqt -f` command provides a method of searching the To, CC, or BCC
 headers of input data.  An easy way to automate address capture is to set the
 mutt [sendmail][] command to a wrapper script.  Either use the `tee` command to
 split the input message to both muttqt and your sendmail program, or copy the
-input mail to a temporary file.  Here is a short example of the tee method: 
+input mail to a temporary file.  Here is a short example of the tee method:
 
-    #!/bin/bash
-    tee >(muttqt -f) | sendmail $*
+```bash
+#!/bin/bash
+tee >(muttqt -f) | sendmail $*
+```
 
 Here is an example of the temp file method, useful if you want to do other things
 with your email message before sending:
 
-    #!/bin/sh -
-    muttqt='/usr/local/bin/muttqt -f'
+```sh
+#!/bin/sh -
+muttqt='/usr/local/bin/muttqt -f'
 
-    sendmailbin='sendmail'
+sendmailbin='sendmail'
 
-    # save msg in file to re-use it for multiple tests
-    t=`mktemp -t mutt.XXXXXX` || exit 2
-    cat > $t
+# save msg in file to re-use it for multiple tests
+t=`mktemp -t mutt.XXXXXX` || exit 2
+cat > $t
 
-    # q all messages first
-    cat $t | ($muttqt)
-    cat $t | ${sendmailbin}
-    rm -f $t
+# q all messages first
+cat $t | ($muttqt)
+cat $t | ${sendmailbin}
+rm -f $t
+```
 
 The above script works on OS X.  One might need to change the `mktemp` command
 to work on other OSes.  These scripts can be found in the *scripts* directory of
@@ -116,13 +132,17 @@ the source distribution, or in the */usr/local/share/muttqt* directory.
 
 Run the following (pointing the command at the appropriate file):
 
-    muttqt -i ~/.lbdb/m_inmail.list
+```sh
+muttqt -i ~/.lbdb/m_inmail.list
+```
 
 ### Exporting the sent SQL database ###
 
 Running the following will produce an `lbdb` compatible file:  
 
-    muttqt -d output.txt
+```sh
+muttqt -d output.txt
+```
 
 This file can be edited and reimported to `muttqt` in the same manner as an
 `lbdb` sent address file.
@@ -136,7 +156,9 @@ ids of the addresses you would like to remove, separated by commas.
 
 If you would like to remove all addresses last used before a certain date, run:
 
-    muttqt --date-prune date
+```sh
+muttqt --date-prune date
+```
 
 where *date* is in a YYYY-MM-DD format.
 
