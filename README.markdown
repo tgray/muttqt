@@ -61,13 +61,47 @@ brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
 
 muttqt's configuration and data files are stored in the `~/.muttqt` directory.
 The configuration is called `muttqt.conf`.  To generate a default configuration
-file, run `muttqt --write-config`.
+file, run `muttqt --write-config`.  An annotated version of this conf file can be found in *scripts/mutt.conf* in the source release or in */usr/local/share/muttqt/muttqt.conf* when installed.
 
-muttqt is set up to utilise an Sqlite3 database for it's sent email address
+muttqt is set up to utilise an Sqlite3 database for its sent email address
 storage.  This can be changed to a flat text file that is lbdb compatible by
 changing the 'format' parameter in the 'sent' section to 'text'.
 
 The Sqlite3 back end is recommended over the flat text file one.  As of now, duplicates are not scrubbed from the file when using the 'text' back end.
+
+### Helpers ###
+
+To add data sources, add an entry to the 'helpers' item in the 'global' section.  The default entry is:
+
+```conf
+helpers = mutt_alias, sent
+```
+
+The order of the entries determines the output ordering.
+
+### External helpers ###
+
+Even though the default configuration file is not set up to query the following tools, it has sections for [contacts][] (osx_abook), [goobook][], and [mu][].  To use any of these external helpers, assuming they have been installed, add the appropriate one to the 'helpers' line.
+
+The section name in the conf for an external helper program is arbitrary and can be set to whatever you want.  However, it must be the same as what is entered in the 'helpers' line.
+
+The settings available for an external helper program are:
+
+* *cmd*:
+  The CLI command that is used to run a search.  The query argument is
+  appended to the end of this.
+
+* *text*:
+  The text used in the search results in the third field.  If this is
+  left blank, the helper name is used.
+
+* *cols*:
+  The columns of the helper tool's output to use.  Defaults to the
+  first two.  The content of this output should be the email address followed by
+  the name of the contact.
+
+* *ignore_first*:
+  Ignore the first line of output.  Defaults to *false*.
 
 ## Example Usage ##
 
