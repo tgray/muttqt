@@ -76,7 +76,7 @@ The Sqlite3 back end is recommended over the flat text file one.  As of now, dup
 
 To add data sources, add an entry to the 'helpers' item in the 'global' section.  The default entry is:
 
-{% highlight conf %}
+{% highlight ini %}
 helpers = mutt_alias, sent
 {% endhighlight %}
 
