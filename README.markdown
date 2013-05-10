@@ -9,7 +9,7 @@ storage solutions from mutt.
 a single entry for multiple email address storage locations.  
 
 `muttqt` currently interfaces with mutt aliases files, a database of email
-addresses that you have sent emails too, as well as functionality to communicate
+addresses that you have sent emails to, as well as functionality to communicate
 with other external tools, such as:
 
 - [contacts][] - a small tool that talks to the Mac OS X Address Book
