@@ -14,7 +14,7 @@ with other external tools, such as:
 
 - [contacts][] - a small tool that talks to the Mac OS X Address Book
 - [goobook][] - a Python program that accesses your Google contacts
-- [mu][] - mu's cfind command, part of the maildir indexing tool
+- [mu][] - mu's cfind command, part of the maildir indexing toolkit
 
 `muttqt` requires `python` and `sqlite3`.  It has been tested with `python` 2.7,
 but should work with earlier versions.
@@ -24,14 +24,13 @@ but should work with earlier versions.
 - Actively supported.
 - Easy to extend.  As long as the external tools provide their output in the
   proper format, no code changes to `muttqt` need to be made.
-- Stores email addresses you have sent messages to in either SQL or a flat text
-  file (lbdb-compatible).
+- Stores email addresses you have sent messages to in either aSqlite3 database
+  or a flat text file (lbdb-compatible).
 - UTF-8 support.  
 
 ## Installing ##
 
-One can copy the `muttqt` python file to your path to install.  Alternately, it
-can be installed by running
+It can be installed by running
 
 ```sh
 make
@@ -45,7 +44,7 @@ prefix setting when running `make install` like so:
 make prefix=/path/to/install install
 ```
 
-For now, you can also install via [homebrew][] on OS X.  The formula is not yet in the [homebrew][] main repository, so it can be installed from my github page:
+You can also install via [homebrew][] on OS X.  The formula is not yet in the [homebrew][] main repository, so it can be installed from my github page:
 
 ```sh
 brew install https://raw.github.com/tgray/homebrew-tgbrew/master/muttqt.rb
@@ -64,9 +63,11 @@ muttqt's configuration and data files are stored in the `~/.muttqt` directory.
 The configuration is called `muttqt.conf`.  To generate a default configuration
 file, run `muttqt --write-config`.
 
-muttqt is setup to utilise an Sqlite3 database for it's sent email address
+muttqt is set up to utilise an Sqlite3 database for it's sent email address
 storage.  This can be changed to a flat text file that is lbdb compatible by
 changing the 'format' parameter in the 'sent' section to 'text'.
+
+The Sqlite3 back end is recommended over the flat text file one.  As of now, duplicates are not scrubbed from the file when using the 'text' back end.
 
 ## Example Usage ##
 
