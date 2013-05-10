@@ -71,10 +71,41 @@ Remove all entries before the date \fIYYYY\-MM\-DD\fR from the sent history data
 Writes out a default configuration file to \fI~/\.muttqt/muttqt\.conf\fR\.
 .
 .SH "CONFIGURATION"
-\fBmuttqt\fR\'s configuration and data files are stored in the \fI~/\.muttqt\fR directory\. The configuration is called \fImuttqt\.conf\fR\. To generate a default configuration file, run \fBmuttqt \-\-write\-config\fR\.
+\fBmuttqt\fR\'s configuration and data files are stored in the \fI~/\.muttqt\fR directory\. The configuration is called \fImuttqt\.conf\fR\. To generate a default configuration file, run \fBmuttqt \-\-write\-config\fR\. An annotated version of this conf file can be found in \fIscripts/mutt\.conf\fR in the source release or in \fI/usr/local/share/muttqt/muttqt\.conf\fR when installed\.
 .
 .P
-\fBmuttqt\fR is setup to utilise an Sqlite3 database for it\'s sent email address storage\. This can be changed to a flat text file that is \fBlbdb\fR compatible by changing the \'format\' parameter in the \'sent\' section to \'text\'\.
+\fBmuttqt\fR is setup to utilise an Sqlite3 database for its sent email address storage\. This can be changed to a flat text file that is \fBlbdb\fR compatible by changing the \'format\' parameter in the \'sent\' section to \'text\'\.
+.
+.P
+The Sqlite3 back end is recommended over the flat text file one\. As of now, duplicates are not scrubbed from the file when using the \'text\' back end\.
+.
+.SS "Helpers"
+To add data sources, add an entry to the \'helpers\' item in the \'[global]\' section\. Entries are comma separated\. The order of the entries determines the output ordering\.
+.
+.SS "External helpers"
+Even though the default configuration file is not set up to query the following tools, it has sections for \fBcontacts\fR (osx_abook), \fBgoobook\fR, and \fBmu\fR\. To use any of these external helpers, assuming they have been installed, add the appropriate one to the \'helpers\' line\.
+.
+.P
+The section name in the conf for an external helper program is arbitrary and can be set to whatever you want\. However, it must be the same as what is entered in the \'helpers\' line\.
+.
+.P
+The settings available for an external helper program are:
+.
+.TP
+\fIcmd\fR
+The CLI command that is used to run a search\. The query argument is appended to the end of this\.
+.
+.TP
+\fItext\fR
+The text used in the search results in the third field\. If this is left blank, the helper name is used\.
+.
+.TP
+\fIcols\fR
+The columns of the helper tool\'s output to use\. Defaults to the first two\. The content of this output should be the email address followed by the name of the contact\.
+.
+.TP
+\fIignore_first\fR
+Ignore the first line of output\. Defaults to \fIfalse\fR\.
 .
 .SH "EXAMPLE USAGE"
 .
