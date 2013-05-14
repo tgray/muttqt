@@ -57,7 +57,7 @@ On OS X, you will probably also want to install the `contacts` program.  It can
 be installed easily by using [homebrew][]:
 
 {% highlight sh %}
-brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts.rb
+brew install https://raw.github.com/tgray/homebrew-tgbrew/master/contacts2.rb
 {% endhighlight %}
 
 ## Configuring ##
