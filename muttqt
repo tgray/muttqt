@@ -600,7 +600,7 @@ def main(argv=None):
     parser.add_argument('-f', '--fetch',
         dest = 'fetch',
         metavar = 'FETCH_FILE',
-        type = file,
+        type = argparse.FileType('r'),
         const = sys.stdin,
         nargs = '?',
         help = ('fetch addressees from a file.  If no file is given, stdin is '
