@@ -3,6 +3,9 @@
 
 Stores sent addresses to a database and queries the database and other sources
 for email addresses."""
+# keeping backward compatibility to python2
+from __future__ import print_function
+
 import os, sys
 import fileinput
 import argparse
@@ -47,7 +50,8 @@ class dataSource(object):
         print("{0} matches:".format(i))
         for i,s in enumerate(data):
             out = fstr % s
-            print out.encode('utf-8')
+            print(out)
+            #print out.encode('utf-8')
 
     def searchData(self, query):
         """Search list data for query."""
@@ -182,7 +186,7 @@ class sentTxtData(dataSource):
             f.writelines(lines)
             f.close()
         except:
-            print "problem writing file %s" % fn
+            print("problem writing file %s" % fn)
             sys.exit(13)
 
     def searchData(self, query, sortby):
@@ -227,7 +231,7 @@ class sentSQLData(dataSource):
             sql = self.sql
             c = self.c
         except:
-            print "can't make sqlite db"
+            print("can't make sqlite db")
             sys.exit(12)
         tables = c.execute('select name from sqlite_master')
         tlist = []
@@ -249,7 +253,7 @@ class sentSQLData(dataSource):
             sql = self.sql
             c = self.c
         except:
-            print 'no sent sql db'
+            print('no sent sql db')
             sys.exit(11)
         c.execute('select rowid, email, name, date from addresses order '
             'by email')
@@ -317,7 +321,7 @@ class sentSQLData(dataSource):
             sql = self.sql
             c = self.c
         except:
-            print 'no sent sql db'
+            print('no sent sql db')
             return
         q = "%s" % query.decode('utf-8')
         c.execute('delete from addresses where datetime(date) < ?', (q,))
@@ -332,7 +336,7 @@ class sentSQLData(dataSource):
             sql = self.sql
             c = self.c
         except:
-            print 'no sent sql db'
+            print('no sent sql db')
             return
         for q in rowids:
             c.execute('delete from addresses where rowid = ?', (q,))
@@ -451,25 +455,25 @@ def configDefaults():
 def configWrite(parser):
     """Writes out a default config file."""
     # write out a default config file if one doesn't exist already
-    print "attempting to make default config file at %s" % configfile
+    print("attempting to make default config file at %s" % configfile)
     if not os.path.exists(os.path.dirname(configfile)):
         try:
-            print "making directory"
+            print("making directory")
             os.makedirs(os.path.dirname(configfile))
         except:
-            print "failed making directory"
+            print("failed making directory")
             sys.exit(10)
     if not os.path.exists(configfile):
         try:
-            print "writing file"
+            print("writing file")
             o = open(configfile, 'w')
             parser.write(o)
             o.close()
         except:
-            print "failed writing file"
+            print("failed writing file")
             sys.exit(10)
     else:
-        print "config file already exists"
+        print("config file already exists")
 
 def configRead():
     """Reads the config file.
@@ -479,7 +483,7 @@ def configRead():
     try:
         parser.read(os.path.expanduser(configfile))
     except:
-        print "problem reading config file"
+        print("problem reading config file")
         sys.exit(10)
     return parser
 
@@ -523,11 +527,11 @@ def ingestLBDB(fn, enc = 'utf-8'):
         lines = fin.readlines()
         fin.close()
     except:
-        print "problem opening file %s" % fn
+        print("problem opening file %s" % fn)
         sys.exit(13)
     data = []
     for line in lines:
-        # print line.rstrip().split('\t')
+        # print(line.rstrip().split('\t'))
         a, n, t = line.rstrip().split('\t')
         t = dt.datetime.strptime(t, lbdbdateformat)
         data.append((a.lower(), n, t.strftime(sqldateformat)))
@@ -543,7 +547,7 @@ def dumpFile(data, fn):
         line = '\t'.join(tmp) + '\n'
         lines.append(line)
     if os.path.exists(fn):
-        print "output file %s already exists" % fn
+        print("output file %s already exists" % fn)
         sys.exit(13)
     try:
         import codecs
@@ -551,7 +555,7 @@ def dumpFile(data, fn):
         f.writelines(lines)
         f.close()
     except:
-        print "problem writing file %s" % fn
+        print("problem writing file %s" % fn)
         sys.exit(13)
 
 def searchDat(data, query):
@@ -566,17 +570,17 @@ def searchDat(data, query):
 def printResults(results, numbered = False):
     """Print search results."""
     i = len(results)
-    print "%i matches:" % i
+    print("%i matches:" % i)
     if numbered:
         fstr = "%s\t%s\t%s\t%s"
     else:
         fstr = "%s\t%s\t%s"
     for i,s in enumerate(results):
         out = fstr % s
-        # print out
+        print(out)
         # print unicode(out)
         # uout = out.decode('utf-8')
-        print out.encode('utf-8')
+        # print out.encode('utf-8')
         # print uout.encode('ascii', 'ignore')
 
 def main(argv=None):
