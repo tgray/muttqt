@@ -427,7 +427,10 @@ def configDefaults():
 
     These are used if a particular parameter can't be found in the config file,
     or if the config file doesn't exist."""
-    parser = ConfigParser()
+    try:
+        parser = ConfigParser(interpolation=None)
+    except TypeError:
+        parser = ConfigParser()
     parser.add_section('global')
     parser.set('global', 'helpers', 'mutt_alias, sent')
     parser.add_section('alias')
