@@ -16,7 +16,10 @@ import datetime as dt
 from time import strftime
 import subprocess as sp
 import shlex
-from ConfigParser import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
 __version__ = "0.1.0"
 __commit__ = None
