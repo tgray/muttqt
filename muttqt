@@ -80,7 +80,8 @@ class aliasData(dataSource):
                 lines = f.readlines()
                 f.close()
             except:
-                return []
+                self.data = []
+                return
             for line in lines:
                 l = line.rstrip().split()
                 if l != [] and l[0] == 'alias':
