@@ -593,6 +593,13 @@ def main(argv=None):
         version = "%(prog)s " + "{0} ({1})".format(__version__, __commit__),
         help = 'prints version')
 
+    parser.add_argument( '-c', '--config',
+        dest = 'config_file',
+        nargs = 1,
+        default = False,
+        help = 'set custom config file')
+
+
     parser.add_argument('-f', '--fetch',
         dest = 'fetch',
         metavar = 'FETCH_FILE',
@@ -651,6 +658,17 @@ def main(argv=None):
         help = 'write out a default config file to ~/.muttqt/muttqt.conf')
 
     args = parser.parse_args()
+
+
+    # don't return a value for set config, other options could be appended as well
+    if args.config_file:
+        if not os.path.isfile(args.config_file[0]):
+            print("Config file not found: %s" % args.config_file[0])
+            sys.exit(1)
+        # Update global config file variable
+        global configfile
+        configfile = os.path.expanduser(args.config_file[0])
+
 
     # get configuration data
     cfg = configRead()
