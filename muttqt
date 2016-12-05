@@ -19,8 +19,8 @@ __version__ = "0.1.0"
 __commit__ = None
 
 # constants
-configfile = '~/.muttqt/muttqt.conf'
-configfile = os.path.expanduser(configfile)
+# configfile = '~/.muttqt/muttqt.conf'
+# configfile = os.path.expanduser(configfile)
 sqldateformat = '%Y-%m-%d %H:%M:%S'
 lbdbdateformat = '%Y-%m-%d %H:%M'
 
@@ -593,6 +593,12 @@ def main(argv=None):
         version = "%(prog)s " + "{0} ({1})".format(__version__, __commit__),
         help = 'prints version')
 
+    parser.add_argument( '-c', '--config',
+        dest = 'config_file',
+        nargs = 1,
+        default = ['~/.muttqt/muttqt.conf'],
+        help = 'set custom config file')
+
     parser.add_argument('-f', '--fetch',
         dest = 'fetch',
         metavar = 'FETCH_FILE',
@@ -652,8 +658,26 @@ def main(argv=None):
 
     args = parser.parse_args()
 
+
+    # don't return a value for set config, other options could be appended as
+    # well
+
+    # Update global config file variable
+    global configfile
+    configfile = os.path.expanduser(args.config_file[0])
+
     # get configuration data
     cfg = configRead()
+
+    if not os.path.isfile(configfile):
+        print("Config file not found: {}".format(configfile))
+        if args.write_config:
+            configWrite(cfg)
+            return 0
+        else:
+            print("""If you would like to create a config file here, rerun as:
+        muttqt --write-config -c {}""".format(configfile))
+            sys.exit(1)
 
     sentFileFormat = cfg.get('sent', 'format')
 
@@ -675,10 +699,6 @@ def main(argv=None):
     if args.print_sent:
         sentSource.getAllSent()
         sentSource.printResults(numbered = True)
-        return 0
-
-    if args.write_config:
-        configWrite(cfg)
         return 0
 
     if args.date_prune:
