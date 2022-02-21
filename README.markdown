@@ -16,12 +16,11 @@ with other external tools, such as:
 - [goobook][] - a Python program that accesses your Google contacts
 - [mu][] - mu's cfind command, part of the maildir indexing toolkit
 
-`muttqt` requires `python` and `sqlite3`.  It has been tested with `python` 2.7,
-but should work with earlier versions.
+`muttqt` requires `python` and `sqlite3`.  It has been tested with `python` 3.9.5, but should work with most `python` 3 versions.  For `python` 2.7 support, try the 0.1.0 release.
 
 ## Advantages over lbdb ##
 
-- Actively supported.
+- Actively supported. (oops!)
 - Easy to extend.  As long as the external tools provide their output in the
   proper format, no code changes to `muttqt` need to be made.
 - Stores email addresses you have sent messages to in either aSqlite3 database
