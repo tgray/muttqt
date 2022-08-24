@@ -273,6 +273,7 @@ class sentSQLData(dataSource):
             sql = self.sql
             c = self.c
         except:
+            self.results = self.data = []
             return
         cfg = self.cfg
         displaydateformat = cfg.get('sent', 'date-format', raw=True)
